@@ -1,0 +1,16 @@
+{
+  "name": "notebarn",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "web",
+    "plugin"
+  ],
+  "scripts": {
+    "test": "npm test --workspaces --if-present"
+  },
+  "overrides": {
+    "@codemirror/state": "6.7.6",
+    "@codemirror/view": "6.43.15"
+  }
+}

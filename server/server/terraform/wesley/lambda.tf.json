@@ -1,0 +1,357 @@
+{
+    "data": {
+        "archive_file": {
+            "lambda": {
+                "depends_on": [
+                    "null_resource.lambda_jar_source",
+                    "null_resource.settings_reread"
+                ],
+                "output_path": "${path.module}/build/lambda.jar",
+                "type": "zip",
+                "source_dir": "${path.module}/build/lambda"
+            }
+        },
+        "aws_caller_identity": {
+            "lambda_current": {}
+        }
+    },
+    "resource": {
+        "local_sensitive_file": {
+            "settings_raw": {
+                "filename": "${path.module}/build/raw-settings.json",
+                "content": "${jsonencode(local.settings_raw)}"
+            }
+        },
+        "aws_iam_role_policy_attachment": {
+            "insights_policy": {
+                "policy_arn": "arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy",
+                "role": "${aws_iam_role.main_exec.id}"
+            },
+            "main_policy_exec": {
+                "policy_arn": "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+                "role": "${aws_iam_role.main_exec.name}"
+            },
+            "servicesAccess": {
+                "policy_arn": "${aws_iam_policy.servicesAccess.arn}",
+                "role": "${aws_iam_role.main_exec.name}"
+            }
+        },
+        "null_resource": {
+            "settings_reread": {
+                "provisioner": {
+                    "local-exec": {
+                        "environment": {
+                            "SETTINGS_PASS": "${random_password.settings.result}"
+                        },
+                        "interpreter": "${local.is_windows ? [\"PowerShell\", \"-Command\"] : []}",
+                        "command": "openssl enc -d -aes-256-cbc -md sha256 -out \"${local_sensitive_file.settings_raw.filename}.decrypted.json\" -in \"${path.module}/build/lambda/settings.enc\" -pass env:SETTINGS_PASS"
+                    }
+                },
+                "depends_on": [
+                    "null_resource.lambda_jar_source"
+                ],
+                "triggers": {
+                    "settingsRawHash": "${local_sensitive_file.settings_raw.content_sha256}"
+                }
+            },
+            "lambda_jar_source": {
+                "provisioner": {
+                    "local-exec": [
+                        {
+                            "interpreter": "${local.is_windows ? [\"PowerShell\", \"-Command\"] : []}",
+                            "command": "${local.is_windows ? \"if(test-path \\\"${path.module}/build/lambda/\\\") { rd -Recurse \\\"${path.module}/build/lambda/\\\" }\" : \"rm -rf \\\"${path.module}/build/lambda/\\\"\"}"
+                        },
+                        {
+                            "interpreter": "${local.is_windows ? [\"PowerShell\", \"-Command\"] : []}",
+                            "command": "${local.is_windows ? \"cp -r -force \\\"${path.module}/../../build/dist/lambda/.\\\" \\\"${path.module}/build/lambda/\\\"\" : \"cp -rf \\\"${path.module}/../../build/dist/lambda/.\\\" \\\"${path.module}/build/lambda/\\\"\"}"
+                        },
+                        {
+                            "environment": {
+                                "SETTINGS_PASS": "${random_password.settings.result}"
+                            },
+                            "interpreter": "${local.is_windows ? [\"PowerShell\", \"-Command\"] : []}",
+                            "command": "openssl enc -aes-256-cbc -md sha256 -in \"${local_sensitive_file.settings_raw.filename}\" -out \"${path.module}/build/lambda/settings.enc\" -pass env:SETTINGS_PASS"
+                        }
+                    ]
+                },
+                "triggers": {
+                    "buildHash": "${sha256(join(\"\", [for f in fileset(\"${path.module}/../../build/dist/lambda\", \"**\") : filesha256(\"${path.module}/../../build/dist/lambda/${f}\")]))}",
+                    "settingsHash": "${local_sensitive_file.settings_raw.content_sha256}"
+                }
+            }
+        },
+        "aws_cloudwatch_log_group": {
+            "main": {
+                "retention_in_days": 30,
+                "name": "notebarn-main-log"
+            }
+        },
+        "aws_lambda_permission": {
+            "scheduled_tasks": {
+                "principal": "events.amazonaws.com",
+                "lifecycle": {
+                    "create_before_destroy": true
+                },
+                "function_name": "${aws_lambda_alias.main.function_name}",
+                "qualifier": "${aws_lambda_alias.main.name}",
+                "action": "lambda:InvokeFunction",
+                "source_arn": "arn:aws:events:us-west-2:${data.aws_caller_identity.lambda_current.account_id}:rule/notebarn*"
+            }
+        },
+        "aws_iam_policy": {
+            "servicesAccess": {
+                "path": "/notebarn/servicesAccess/",
+                "name": "notebarn-servicesAccess",
+                "description": "Access to the notebarn services",
+                "policy": "${jsonencode(local.servicesAccessPolicy)}"
+            }
+        },
+        "aws_lambda_alias": {
+            "main": {
+                "function_name": "${aws_lambda_function.main.arn}",
+                "name": "prod",
+                "description": "The current production version of the lambda.",
+                "function_version": "${aws_lambda_function.main.version}"
+            }
+        },
+        "aws_iam_role": {
+            "main_exec": {
+                "name": "notebarn-main-exec",
+                "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":\"sts:AssumeRole\",\"Effect\":\"Allow\",\"Sid\":\"\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"}}]}"
+            }
+        },
+        "random_password": {
+            "settings": {
+                "special": true,
+                "length": 32,
+                "override_special": "-_"
+            }
+        },
+        "aws_lambda_function": {
+            "main": {
+                "handler": "com.wesleyedwards.notebarn.AwsHandler",
+                "role": "${aws_iam_role.main_exec.arn}",
+                "depends_on": [
+                    "aws_s3_object.app_storage"
+                ],
+                "source_code_hash": "${data.archive_file.lambda.output_base64sha256}",
+                "runtime": "java17",
+                "s3_bucket": "${aws_s3_bucket.lambda_bucket.id}",
+                "timeout": 300,
+                "memory_size": 1024,
+                "logging_config": {
+                    "log_format": "Text",
+                    "log_group": "${aws_cloudwatch_log_group.main.name}"
+                },
+                "environment": {
+                    "variables": {
+                        "LIGHTNING_SERVER_SETTINGS_DECRYPTION": "${random_password.settings.result}"
+                    }
+                },
+                "snap_start": {
+                    "apply_on": "PublishedVersions"
+                },
+                "function_name": "notebarn-main",
+                "publish": true,
+                "s3_key": "${aws_s3_object.app_storage.key}",
+                "layers": []
+            }
+        },
+        "aws_s3_bucket": {
+            "lambda_bucket": {
+                "force_destroy": true,
+                "bucket_prefix": "notebarn-lambda-bucket"
+            }
+        },
+        "aws_s3_object": {
+            "app_storage": {
+                "bucket": "${aws_s3_bucket.lambda_bucket.id}",
+                "depends_on": [
+                    "data.archive_file.lambda"
+                ],
+                "source": "${data.archive_file.lambda.output_path}",
+                "source_hash": "${data.archive_file.lambda.output_md5}",
+                "key": "lambda-functions.zip"
+            }
+        }
+    },
+    "locals": {
+        "settings_raw": {
+            "general": {
+                "projectName": "Notebarn",
+                "publicUrl": "https://api.notebarn.a.wesleyedwards.xyz",
+                "wsUrl": "wss://ws.api.notebarn.a.wesleyedwards.xyz?path=",
+                "debug": false,
+                "emergencyContact": "wesleyutahedwards@gmail.com"
+            },
+            "cache": "dynamodb://us-west-2/notebarn",
+            "database": "mongodb+srv://notebarndatabase-main:${random_password.database.result}@${replace(mongodbatlas_advanced_cluster.database.connection_strings.standard_srv, \"mongodb+srv://\", \"\")}/default?retryWrites=true&w=majority&atlasSearch=true",
+            "cors": {
+                "limitToDomains": [
+                    "*"
+                ],
+                "limitToHeaders": [
+                    "*"
+                ],
+                "limitToMethods": [
+                    "*"
+                ],
+                "exposedHeaders": [],
+                "allowCredentials": false,
+                "cacheLength": null,
+                "forbidOnMatchFail": true
+            },
+            "allowedEmails": "${var.allowedEmails}",
+            "secretBasis": "${random_password.secretBasis.result}",
+            "files": "s3://${aws_s3_bucket.files.bucket}.s3-${aws_s3_bucket.files.region}.amazonaws.com/?signedUrlDuration=12h",
+            "logging": {
+                "default": {
+                    "filePattern": null,
+                    "toConsole": true,
+                    "level": "DEBUG",
+                    "additive": false
+                },
+                "logger": {
+                    "org.mongodb": {
+                        "filePattern": null,
+                        "toConsole": false,
+                        "level": "INFO",
+                        "additive": false
+                    },
+                    "software.amazon.awssdk": {
+                        "filePattern": null,
+                        "toConsole": false,
+                        "level": "INFO",
+                        "additive": false
+                    },
+                    "io.netty": {
+                        "filePattern": null,
+                        "toConsole": false,
+                        "level": "INFO",
+                        "additive": false
+                    },
+                    "com.lightningkite.lightningserver.metrics": {
+                        "filePattern": null,
+                        "toConsole": false,
+                        "level": "INFO",
+                        "additive": false
+                    }
+                }
+            },
+            "awsApiGatewayWsEndpointSetting": "${aws_apigatewayv2_stage.ws.invoke_url}",
+            "telemetry": {
+                "url": "noop",
+                "batching": {
+                    "frequency": "PT5M",
+                    "maxQueueSize": 2048,
+                    "maxSize": 512,
+                    "exportTimeout": "PT30S"
+                },
+                "metricReportBatching": {
+                    "frequency": "PT5M",
+                    "maxQueueSize": 2048,
+                    "maxSize": 512,
+                    "exportTimeout": "PT30S"
+                },
+                "traceReportBatching": {
+                    "frequency": "PT5M",
+                    "maxQueueSize": 2048,
+                    "maxSize": 512,
+                    "exportTimeout": "PT30S"
+                },
+                "logReportBatching": {
+                    "frequency": "PT5M",
+                    "maxQueueSize": 20480,
+                    "maxSize": 5120,
+                    "exportTimeout": "PT30S"
+                },
+                "batchingLimits": {
+                    "frequency": "PT5M",
+                    "maxQueueSize": 2048,
+                    "maxSize": 512,
+                    "exportTimeout": "PT30S"
+                },
+                "spanLimits": {
+                    "maxAttributeValueLength": 1024,
+                    "maxNumberOfAttributes": 128,
+                    "maxNumberOfEvents": 128,
+                    "maxNumberOfLinks": 128,
+                    "maxNumberOfAttributesPerEvent": 32,
+                    "maxNumberOfAttributesPerLink": 32
+                },
+                "logLimits": {
+                    "maxBodyLength": 8192,
+                    "maxStackTraceDepth": 50
+                },
+                "sampling": null,
+                "maxSpansPerSecond": null,
+                "maxLogsPerSecond": null
+            },
+            "email": "smtp://${aws_iam_access_key.email.id}:${aws_iam_access_key.email.ses_smtp_password_v4}@email-smtp.us-west-2.amazonaws.com:587?fromEmail=noreply@api.notebarn.a.wesleyedwards.xyz"
+        },
+        "is_windows": "${substr(pathexpand(\"~\"), 0, 1) == \"/\" ? false : true}",
+        "servicesAccessPolicy": {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Action": [
+                        "s3:ListBucket",
+                        "s3:GetBucketLocation"
+                    ],
+                    "Effect": "Allow",
+                    "Resource": [
+                        "${aws_s3_bucket.files.arn}"
+                    ]
+                },
+                {
+                    "Action": [
+                        "s3:GetObject",
+                        "s3:PutObject",
+                        "s3:DeleteObject"
+                    ],
+                    "Effect": "Allow",
+                    "Resource": [
+                        "${aws_s3_bucket.files.arn}/*"
+                    ]
+                },
+                {
+                    "Action": [
+                        "execute-api:ManageConnections"
+                    ],
+                    "Effect": "Allow",
+                    "Resource": [
+                        "*"
+                    ]
+                },
+                {
+                    "Action": [
+                        "s3:GetObject"
+                    ],
+                    "Effect": "Allow",
+                    "Resource": [
+                        "${aws_s3_bucket.lambda_bucket.arn}",
+                        "${aws_s3_bucket.lambda_bucket.arn}/*"
+                    ]
+                },
+                {
+                    "Action": [
+                        "dynamodb:*"
+                    ],
+                    "Effect": "Allow",
+                    "Resource": [
+                        "*"
+                    ]
+                },
+                {
+                    "Action": [
+                        "lambda:InvokeFunction"
+                    ],
+                    "Effect": "Allow",
+                    "Resource": [
+                        "*"
+                    ]
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,46 @@
+
+[versions]
+graalVmNative = "0.11.3"
+kotlin = "2.3.20"
+kotlinerCli = "1.0.5"
+kotlinxSerializationCsvDurable = "0.2.21-1"
+ksp = "2.3.6"
+lightningServer = "5.0.0-wetssdkupdates-5-d9ab4856-1-local"
+#lightningServer = "5.0.1-wetssdkupdates-4-local"
+serviceAbstractions = "1.2.0-5-295db54f"
+shadow = "8.1.1"
+
+[libraries]
+comLightningKite-csvDurable = { module = "com.lightningkite:kotlinx-serialization-csv-durable", version = { ref = "kotlinxSerializationCsvDurable" } }
+comLightningKite-lightningServer-core = { module = "com.lightningkite.lightningserver:core", version = { ref = "lightningServer" } }
+comLightningKite-lightningServer-core-shared = { module = "com.lightningkite.lightningserver:core-shared", version = { ref = "lightningServer" } }
+comLightningKite-lightningServer-engine-aws = { module = "com.lightningkite.lightningserver:engine-aws-serverless", version = { ref = "lightningServer" } }
+comLightningKite-lightningServer-secretSource-aws = { module = "com.lightningkite.lightningserver:secret-source-aws", version = { ref = "lightningServer" } }
+comLightningKite-lightningServer-engine-ktor = { module = "com.lightningkite.lightningserver:engine-ktor", version = { ref = "lightningServer" } }
+comLightningKite-lightningServer-engine-netty = { module = "com.lightningkite.lightningserver:engine-netty", version = { ref = "lightningServer" } }
+comLightningKite-lightningServer-files = { module = "com.lightningkite.lightningserver:files", version = { ref = "lightningServer" } }
+comLightningKite-lightningServer-files-shared = { module = "com.lightningkite.lightningserver:files-shared", version = { ref = "lightningServer" } }
+comLightningKite-lightningServer-media = { module = "com.lightningkite.lightningserver:media", version = { ref = "lightningServer" } }
+comLightningKite-lightningServer-media-shared = { module = "com.lightningkite.lightningserver:media-shared", version = { ref = "lightningServer" } }
+comLightningKite-lightningServer-sessions = { module = "com.lightningkite.lightningserver:sessions", version = { ref = "lightningServer" } }
+comLightningKite-lightningServer-sessions-email = { module = "com.lightningkite.lightningserver:sessions-email", version = { ref = "lightningServer" } }
+comLightningKite-lightningServer-sessions-shared = { module = "com.lightningkite.lightningserver:sessions-shared", version = { ref = "lightningServer" } }
+comLightningKite-lightningServer-sessions-sms = { module = "com.lightningkite.lightningserver:sessions-sms", version = { ref = "lightningServer" } }
+comLightningKite-lightningServer-typed = { module = "com.lightningkite.lightningserver:typed", version = { ref = "lightningServer" } }
+comLightningKite-lightningServer-typed-shared = { module = "com.lightningkite.lightningserver:typed-shared", version = { ref = "lightningServer" } }
+comLightningKite-services-database = { module = "com.lightningkite.services:database", version = { ref = "serviceAbstractions" } }
+comLightningKite-services-database-jsonfile = { module = "com.lightningkite.services:database-jsonfile", version = { ref = "serviceAbstractions" } }
+comLightningKite-services-database-mongodb = { module = "com.lightningkite.services:database-mongodb", version = { ref = "serviceAbstractions" } }
+comLightningKite-services-database-processor = { module = "com.lightningkite.services:database-processor", version = { ref = "serviceAbstractions" } }
+comLightningKite-services-email-javasmtp = { module = "com.lightningkite.services:email-javasmtp", version = { ref = "serviceAbstractions" } }
+comLightningKite-services-files-s3 = { module = "com.lightningkite.services:files-s3", version = { ref = "serviceAbstractions" } }
+comLightningKite-services-notifications-firebase = { module = "com.lightningkite.services:notifications-fcm", version = { ref = "serviceAbstractions" } }
+kotliner-cli = { module = "com.lightningkite:kotliner-cli", version = { ref = "kotlinerCli" } }
+
+[plugins]
+graalVmNative = { id = "org.graalvm.buildtools.native", version = { ref = "graalVmNative" } }
+kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version = { ref = "kotlin" } }
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version = { ref = "kotlin" } }
+ksp = { id = "com.google.devtools.ksp", version = { ref = "ksp" } }
+serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version = { ref = "kotlin" } }
+shadow = { id = "com.github.johnrengelman.shadow", version = { ref = "shadow" } }

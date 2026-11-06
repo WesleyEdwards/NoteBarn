@@ -1,0 +1,7 @@
+node_modules
+# The plugin's settings (including the sign-in session) and sync state, and its installed build.
+test-sync/.obsidian/
+# Local editor and Claude Code settings.
+/.claude
+/.idea
+/.vscode

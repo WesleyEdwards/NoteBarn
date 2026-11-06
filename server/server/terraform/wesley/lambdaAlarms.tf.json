@@ -1,0 +1,150 @@
+{
+    "resource": {
+        "aws_sns_topic": {
+            "emergency": {
+                "name": "notebarn_emergencies"
+            }
+        },
+        "aws_cloudwatch_metric_alarm": {
+            "notebarnlambdaspend7d": {
+                "alarm_name": "notebarn_notebarnlambdaspend7d",
+                "period": 604800,
+                "statistic": "Sum",
+                "alarm_actions": [
+                    "${aws_sns_topic.emergency.arn}"
+                ],
+                "threshold": 41999916,
+                "datapoints_to_alarm": 1,
+                "insufficient_data_actions": [],
+                "metric_name": "Duration",
+                "evaluation_periods": 1,
+                "alarm_description": "Notebarn Lambda Spend (7d)",
+                "comparison_operator": "GreaterThanOrEqualToThreshold",
+                "namespace": "AWS/Lambda",
+                "dimensions": {
+                    "FunctionName": "${aws_lambda_function.main.function_name}"
+                }
+            },
+            "notebarnlambdaspend1h": {
+                "alarm_name": "notebarn_notebarnlambdaspend1h",
+                "period": 3600,
+                "statistic": "Sum",
+                "alarm_actions": [
+                    "${aws_sns_topic.emergency.arn}"
+                ],
+                "threshold": 1999996,
+                "datapoints_to_alarm": 1,
+                "insufficient_data_actions": [],
+                "metric_name": "Duration",
+                "evaluation_periods": 1,
+                "alarm_description": "Notebarn Lambda Spend (1h)",
+                "comparison_operator": "GreaterThanOrEqualToThreshold",
+                "namespace": "AWS/Lambda",
+                "dimensions": {
+                    "FunctionName": "${aws_lambda_function.main.function_name}"
+                }
+            },
+            "notebarnlambdaspend5m": {
+                "alarm_name": "notebarn_notebarnlambdaspend5m",
+                "period": 300,
+                "statistic": "Sum",
+                "alarm_actions": [
+                    "${aws_sns_topic.emergency.arn}"
+                ],
+                "threshold": 666665,
+                "datapoints_to_alarm": 1,
+                "insufficient_data_actions": [],
+                "metric_name": "Duration",
+                "evaluation_periods": 1,
+                "alarm_description": "Notebarn Lambda Spend (5m)",
+                "comparison_operator": "GreaterThanOrEqualToThreshold",
+                "namespace": "AWS/Lambda",
+                "dimensions": {
+                    "FunctionName": "${aws_lambda_function.main.function_name}"
+                }
+            },
+            "notebarnlambdaspend1d": {
+                "alarm_name": "notebarn_notebarnlambdaspend1d",
+                "period": 86400,
+                "statistic": "Sum",
+                "alarm_actions": [
+                    "${aws_sns_topic.emergency.arn}"
+                ],
+                "threshold": 11999976,
+                "datapoints_to_alarm": 1,
+                "insufficient_data_actions": [],
+                "metric_name": "Duration",
+                "evaluation_periods": 1,
+                "alarm_description": "Notebarn Lambda Spend (1d)",
+                "comparison_operator": "GreaterThanOrEqualToThreshold",
+                "namespace": "AWS/Lambda",
+                "dimensions": {
+                    "FunctionName": "${aws_lambda_function.main.function_name}"
+                }
+            },
+            "notebarnlambdaspend4h": {
+                "alarm_name": "notebarn_notebarnlambdaspend4h",
+                "period": 14400,
+                "statistic": "Sum",
+                "alarm_actions": [
+                    "${aws_sns_topic.emergency.arn}"
+                ],
+                "threshold": 3999992,
+                "datapoints_to_alarm": 1,
+                "insufficient_data_actions": [],
+                "metric_name": "Duration",
+                "evaluation_periods": 1,
+                "alarm_description": "Notebarn Lambda Spend (4h)",
+                "comparison_operator": "GreaterThanOrEqualToThreshold",
+                "namespace": "AWS/Lambda",
+                "dimensions": {
+                    "FunctionName": "${aws_lambda_function.main.function_name}"
+                }
+            },
+            "notebarnlambdaspend15m": {
+                "alarm_name": "notebarn_notebarnlambdaspend15m",
+                "period": 900,
+                "statistic": "Sum",
+                "alarm_actions": [
+                    "${aws_sns_topic.emergency.arn}"
+                ],
+                "threshold": 999998,
+                "datapoints_to_alarm": 1,
+                "insufficient_data_actions": [],
+                "metric_name": "Duration",
+                "evaluation_periods": 1,
+                "alarm_description": "Notebarn Lambda Spend (15m)",
+                "comparison_operator": "GreaterThanOrEqualToThreshold",
+                "namespace": "AWS/Lambda",
+                "dimensions": {
+                    "FunctionName": "${aws_lambda_function.main.function_name}"
+                }
+            }
+        },
+        "aws_api_gateway_account": {
+            "main": {
+                "cloudwatch_role_arn": "${aws_iam_role.cloudwatch.arn}"
+            }
+        },
+        "aws_iam_role": {
+            "cloudwatch": {
+                "name": "notebarn",
+                "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":\"sts:AssumeRole\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"apigateway.amazonaws.com\",\"lambda.amazonaws.com\"]},\"Sid\":\"\"}]}"
+            }
+        },
+        "aws_sns_topic_subscription": {
+            "emergency_primary": {
+                "protocol": "email",
+                "endpoint": "wesleyutahedwards@gmail.com",
+                "topic_arn": "${aws_sns_topic.emergency.arn}"
+            }
+        },
+        "aws_iam_role_policy": {
+            "cloudwatch": {
+                "role": "${aws_iam_role.cloudwatch.id}",
+                "name": "notebarn_policy",
+                "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":[\"logs:CreateLogGroup\",\"logs:CreateLogStream\",\"logs:DescribeLogGroups\",\"logs:DescribeLogStreams\",\"logs:PutLogEvents\",\"logs:GetLogEvents\",\"logs:FilterLogEvents\"],\"Resource\":\"*\",\"Effect\":\"Allow\"}]}"
+            }
+        }
+    }
+}

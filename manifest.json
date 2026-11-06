@@ -1,0 +1,9 @@
+{
+  "id": "notebarn",
+  "name": "Notebarn",
+  "version": "0.1.2",
+  "minAppVersion": "1.7.2",
+  "description": "Syncs this vault with your own Notebarn server.",
+  "author": "Wesley Edwards",
+  "isDesktopOnly": false
+}

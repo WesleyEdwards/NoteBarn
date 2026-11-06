@@ -1,0 +1,33 @@
+.notebarn-status {
+  cursor: pointer;
+}
+
+.notebarn-status.is-error {
+  color: var(--text-error);
+}
+
+.notebarn-status.is-offline {
+  color: var(--text-warning);
+}
+
+.notebarn-list {
+  max-height: 60vh;
+  overflow-y: auto;
+  font-size: var(--font-ui-small);
+  user-select: text;
+}
+
+.notebarn-list .notebarn-group {
+  margin: 12px 0 4px;
+  font-weight: var(--font-semibold);
+}
+
+.notebarn-list .notebarn-row {
+  padding: 2px 0;
+  font-family: var(--font-monospace);
+  word-break: break-all;
+}
+
+.notebarn-muted {
+  color: var(--text-muted);
+}

@@ -1,0 +1,7 @@
+{
+    "variable": {
+        "allowedEmails": {
+            "type": "list(string)"
+        }
+    }
+}

@@ -1,0 +1,45 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.53.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.9.0"
+    }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.8.0"
+    }
+  }
+  required_version = "~> 1.0"
+}
+terraform {
+  backend "s3" {
+    bucket = "wesleyedwards-terraform"
+    key    = "notebarn/prod-frontend"
+    region = "us-west-2"
+  }
+}
+
+provider "aws" {
+  region = "us-west-2"
+}
+provider "aws" {
+  alias  = "acm"
+  region = "us-east-1"
+}
+
+module "web" {
+  source = "github.com/lightningkite/terraform-static-site.git?ref=1.2.2"
+  providers = {
+    aws = aws
+    aws.acm = aws.acm
+  }
+  deployment_name = "prod"
+  dist_folder = "../../dist"
+  domain_name = "notebarn.a.wesleyedwards.xyz"
+  domain_name_zone = "a.wesleyedwards.xyz"
+  react_mode = true
+}
