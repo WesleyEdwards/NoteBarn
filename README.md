@@ -166,6 +166,19 @@ production, `server/local/files` locally) at `attachments/<vault>/<sha256>`, so 
   replaces); `POST /note/deleted` lists notes deleted in the last 90 days. In the web app: "Version history…" in a
   note's menu, and "Recently deleted…" in the sidebar's menu.
 
+**Sharing**: a note can be shared through a link anyone can open, without signing in (`Share`, see
+`server/.../data/ShareEndpoints.kt`). The link always shows the note as it is now, read-only, with the attachments it
+embeds; links to other notes show as plain text. The link's secret is the share's random ID.
+
+- `POST /share/create {vault, path}` returns the note's share (the same one if it's already shared);
+  `POST /share/stop {vault, path}` turns it off. Owners list their shares through the `/share` REST endpoints.
+- `POST /share/view <share id>` needs no login: the note's title (not its folder), content and modified time, plus a
+  download link for each embedded attachment, keyed by the name the embed uses. The server finds embeds the way the
+  web app does (`ShareEndpoints.resolve` matches `resolveWikilink` in `shared/src/paths.ts`), and sends nothing else
+  from the vault.
+- Renaming a note through `/note/rename` moves its share along. Deleting the note ends it. The Obsidian plugin
+  renames by deleting and writing, so renaming a shared note in Obsidian ends its link.
+
 Rename, delete, changes and the manifest treat attachments like any note. They're never merged: if both sides changed
 one, the server's stays at the path and the other is kept as a conflict copy (`Photo (conflict …).png`).
 
@@ -183,6 +196,8 @@ In the web app:
   photo or file). On a computer: Ctrl/⌘+B, I, Enter (checkbox), F (find and replace), O (find a note), N, E, S, \\.
 - The calendar button opens today's daily note (`2026-11-05.md`, in the folder that already holds daily notes).
 - Vaults can be renamed and deleted from the vault list.
+- "Share…" in a note's menu makes a link anyone can read it through (copied straight away), at `/s/<id>`. Shared notes
+  have a 🔗 in the sidebar; "Stop sharing" in the same dialog turns the link off.
 
 Paste or drop a file into a note to upload it next to the note and link it (`![[name]]`); reading
 view shows images, PDFs, audio and video, and opening an attachment from the file list shows it with a download
@@ -198,3 +213,5 @@ device, and retries while offline. Recently opened notes and the app itself are 
 
 - Attachments: replaced or deleted files' bytes stay in the file store (nothing cleans them up yet, except deleting
   the vault). The web app shows `![[embeds]]` only in reading view, not while editing.
+- Web app: choose the sidebar's sort order, like Obsidian: by name (A–Z, Z–A) or modified time (newest, oldest), kept
+  per vault on each device. Created time would need a new server field.

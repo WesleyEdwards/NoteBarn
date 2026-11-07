@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react"
 import {Link, useLocation, useNavigate, useParams} from "react-router-dom"
-import type {Api, NoteVersionSummary, User, Vault} from "@notebarn/shared/api"
+import type {Api, NoteVersionSummary, Share, User, Vault} from "@notebarn/shared/api"
 import {errorMessage} from "../api/client"
 import {liveChangesUrl} from "../backends"
 import {
@@ -33,6 +33,7 @@ import {when} from "../lib/when"
 import {PopupMenu, type MenuAnchor, type MenuItem} from "./Menu"
 import {NoteView, type Mode} from "./NoteView"
 import {QuickSwitcher} from "./QuickSwitcher"
+import {ShareDialog} from "./ShareDialog"
 import {useToast} from "./Toast"
 
 export const notePath = (vault: string, path: string) => `/v/${vault}/n/${path.split("/").map(encodeURIComponent).join("/")}`
@@ -413,6 +414,7 @@ export function Workspace({
       {label: "Move to…", run: () => void moveItem(item)},
       {label: "Duplicate", run: () => void duplicate(p)},
       ...(isTextFile(p) ? [{label: "New note in this folder", run: () => void newNote(dirname(p))}] : []),
+      ...(isMarkdown(p) ? [{label: sharedPaths.has(p) ? "Shared…" : "Share…", run: () => setSharing(p)}] : []),
       "separator" as const,
       {label: isTextFile(p) ? "Delete note" : "Delete file", danger: true, run: () => void deleteItem(item)}
     ]
@@ -427,6 +429,17 @@ export function Workspace({
     {label: "Switch vault", run: () => navigate("/vaults")},
     {label: `Sign out (${user.email})`, run: signOut}
   ]
+
+  const [shares, setShares] = useState<Share[]>([])
+  const [sharing, setSharing] = useState<string | null>(null)
+  const sharedPaths = useMemo(() => new Set(shares.map((s) => s.path)), [shares])
+  // Claude: asked again whenever the file list changes, since a rename or delete moves or ends a note's share.
+  const pathsKey = paths.join("\n")
+  useEffect(() => {
+    api.share.query({condition: {vault: {Equal: vaultId}}, limit: 10000}).then(setShares, () => {})
+  }, [api, vaultId, pathsKey])
+  const onShareChange = (p: string, share: Share | null) =>
+    setShares((list) => [...list.filter((s) => s.path !== p), ...(share ? [share] : [])])
 
   const [historyOpen, setHistoryOpen] = useState(false)
   const [deletedOpen, setDeletedOpen] = useState(false)
@@ -534,6 +547,7 @@ export function Workspace({
         {label: "Duplicate", run: () => void duplicate(path)},
         {label: "New note in this folder", run: () => void newNote(dirname(path))},
         {label: "Version history…", run: () => setHistoryOpen(true)},
+        ...(isMarkdown(path) ? [{label: sharedPaths.has(path) ? "Shared…" : "Share…", run: () => setSharing(path)}] : []),
         "separator",
         {label: isAttachment ? "Delete file" : "Delete note", danger: true, run: () => void deleteItem({kind: "file", path})}
       ]
@@ -575,6 +589,7 @@ export function Workspace({
               onNewNote={(f) => void newNote(f)}
               onMenu={onTreeMenu}
               onDrop={onTreeDrop}
+              shared={sharedPaths}
             />
           ) : (
             <p className="tree-empty">Loading…</p>
@@ -686,6 +701,16 @@ export function Workspace({
           current={sessionRef.current?.text ?? ""}
           onRestore={restoreVersion}
           onClose={() => setHistoryOpen(false)}
+        />
+      )}
+      {sharing && (
+        <ShareDialog
+          api={api}
+          vault={vaultId}
+          path={sharing}
+          share={shares.find((s) => s.path === sharing) ?? null}
+          onChange={(share) => onShareChange(sharing, share)}
+          onClose={() => setSharing(null)}
         />
       )}
       {deletedOpen && <RecentlyDeleted api={api} vault={vaultId} onRestore={restoreVersion} onClose={() => setDeletedOpen(false)} />}

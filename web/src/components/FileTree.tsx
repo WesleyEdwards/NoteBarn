@@ -15,11 +15,13 @@ interface FileTreeProps {
   onMenu(item: TreeItem, anchor: MenuAnchor): void
   /** Dragged onto a folder (or "" for the top level). */
   onDrop(item: TreeItem, folder: string): void
+  /** Notes with a share link, which get a mark. */
+  shared: ReadonlySet<string>
 }
 
 const DRAG_TYPE = "application/x-notebarn-item"
 
-export const FileTree = memo(function FileTree({vault, paths, current, onOpen, onNewNote, onMenu, onDrop}: FileTreeProps) {
+export const FileTree = memo(function FileTree({vault, paths, current, onOpen, onNewNote, onMenu, onDrop, shared}: FileTreeProps) {
   const tree = useMemo(() => buildTree(paths), [paths])
   const [open, setOpen] = usePersistentState<Record<string, boolean>>(`tree-open:${vault}`, {})
   const [dropTarget, setDropTarget] = useState<string | null>(null)
@@ -128,6 +130,11 @@ export const FileTree = memo(function FileTree({vault, paths, current, onOpen, o
           >
             {isMarkdown(p) ? noteTitle(p) : basename(p)}
             {!isMarkdown(p) && <span className="file-ext">{basename(p).split(".").pop()}</span>}
+            {shared.has(p) && (
+              <span className="shared-mark" title="Shared: anyone with the link can read it">
+                🔗
+              </span>
+            )}
           </button>
         </li>
       ))}

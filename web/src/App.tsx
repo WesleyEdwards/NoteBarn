@@ -1,11 +1,16 @@
-import {Navigate, Route, Routes} from "react-router-dom"
+import {Navigate, Route, Routes, useMatch} from "react-router-dom"
+import type {Share} from "@notebarn/shared/api"
 import {useSession} from "./api/client"
 import {LoginPage} from "./components/LoginPage"
+import {SharedPage} from "./components/SharedPage"
 import {VaultList} from "./components/VaultList"
 import {Workspace} from "./components/Workspace"
 
 export default function App() {
   const session = useSession()
+  // Shared notes open for anyone, signed in or not.
+  const shared = useMatch("/s/:shareId")
+  if (shared) return <SharedPage id={shared.params.shareId as Share.ID} />
 
   if (session.state === "loading") return <div className="splash" aria-busy="true" />
 

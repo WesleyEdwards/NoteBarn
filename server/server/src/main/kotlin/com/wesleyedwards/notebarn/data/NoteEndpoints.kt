@@ -316,7 +316,10 @@ object NoteEndpoints : ServerBuilder() {
                 existing == null -> throw NotFoundException("No note at $path.")
                 existing.deleted -> WriteResult(true, existing)
                 input.baseVersion != null && existing.version != input.baseVersion -> WriteResult(false, existing)
-                else -> tombstone(existing, vault._id)?.let { WriteResult(true, it) } ?: WriteResult(false, find(vault._id, path))
+                else -> tombstone(existing, vault._id)?.let {
+                    ShareEndpoints.deleted(vault._id, path)
+                    WriteResult(true, it)
+                } ?: WriteResult(false, find(vault._id, path))
             }
         }
     )
@@ -339,6 +342,7 @@ object NoteEndpoints : ServerBuilder() {
             // The content lives on at the new path, so there's nothing to keep a copy of; its history goes along.
             tombstone(existing, vault._id, keepCopy = false)
             NoteHistory.moved(historyInfo.table(), vault._id, from, to)
+            ShareEndpoints.moved(vault._id, from, to)
             WriteResult(true, moved)
         }
     )

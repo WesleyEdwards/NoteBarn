@@ -1805,3 +1805,47 @@ kbd {
     padding: 11px 14px;
   }
 }
+
+/* Shared note */
+
+.shared-page {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.shared-page .note {
+  padding-bottom: 48px;
+}
+
+.shared-footer {
+  margin-top: 40px;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+.markdown .embed-link.plain {
+  color: inherit;
+}
+
+.shared-mark {
+  font-size: 11px;
+  margin-left: 6px;
+  opacity: 0.7;
+}
+
+.share-link {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.share-link input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}

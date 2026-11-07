@@ -275,6 +275,36 @@ export interface Session<T, T1> {
 	scopes: Array<GrantedScope>
 }
 
+export interface Share {
+	_id: Share.ID
+	owner: User.ID
+	vault: Vault.ID
+	path: string
+	createdAt: Instant
+}
+
+export namespace Share {
+	export type ID = Brand<Uuid, "Share.ID">
+}
+
+export interface ShareNote {
+	vault: Vault.ID
+	path: string
+}
+
+export interface SharedAttachment {
+	target: string
+	hash: string
+	url: string
+}
+
+export interface SharedNote {
+	title: string
+	content: string
+	modifiedAt: Instant
+	attachments: Array<SharedAttachment>
+}
+
 export interface SubSessionRequest {
 	label: string
 	scopes: Array<GrantedScope>
@@ -383,6 +413,15 @@ export interface Api {
 		modifyWithDiff(id: User.ID, input: Modification<User>): Promise<EntryChange<User>>
 	}
 	readonly userAuth: {
+		getSelf(): Promise<User>
+		terminateCurrentSession(): Promise<void>
+		logIn(input: Array<Proof>): Promise<IdAndAuthMethods<User.ID>>
+		checkProofs(input: Array<Proof>): Promise<ProofsCheckResult<User.ID>>
+		createSubSession(input: SubSessionRequest): Promise<string>
+		authenticationRequirements(): Promise<AuthRequirements>
+		logInWithLimitations(input: LogInRequest): Promise<IdAndAuthMethods<User.ID>>
+		getTokenSimple(input: string): Promise<string>
+		terminateSession(sessionId: Uuid): Promise<void>
 		list(input: Query<Session<User, User.ID>>): Promise<Array<Session<User, User.ID>>>
 		insert(input: Session<User, User.ID>): Promise<Session<User, User.ID>>
 		permissions(): Promise<ModelPermissions<Session<User, User.ID>>>
@@ -407,15 +446,6 @@ export interface Api {
 		modifyWithDiff(id: Uuid, input: Modification<Session<User, User.ID>>): Promise<EntryChange<Session<User, User.ID>>>
 		proveEmailOwnership(input: FinishProof): Promise<Proof>
 		beginEmailOwnershipProof(input: string): Promise<string>
-		getSelf(): Promise<User>
-		terminateCurrentSession(): Promise<void>
-		logIn(input: Array<Proof>): Promise<IdAndAuthMethods<User.ID>>
-		checkProofs(input: Array<Proof>): Promise<ProofsCheckResult<User.ID>>
-		createSubSession(input: SubSessionRequest): Promise<string>
-		authenticationRequirements(): Promise<AuthRequirements>
-		logInWithLimitations(input: LogInRequest): Promise<IdAndAuthMethods<User.ID>>
-		getTokenSimple(input: string): Promise<string>
-		terminateSession(sessionId: Uuid): Promise<void>
 	}
 	readonly vault: {
 		list(input: Query<Vault>): Promise<Array<Vault>>
@@ -479,6 +509,33 @@ export interface Api {
 		simplifiedModify(id: Note.ID, input: Partial<Note>): Promise<Note>
 		modifyWithDiff(id: Note.ID, input: Modification<Note>): Promise<EntryChange<Note>>
 	}
+	readonly share: {
+		viewSharedNote(input: Share.ID): Promise<SharedNote>
+		stopSharing(input: ShareNote): Promise<void>
+		shareNote(input: ShareNote): Promise<Share>
+		list(input: Query<Share>): Promise<Array<Share>>
+		insert(input: Share): Promise<Share>
+		permissions(): Promise<ModelPermissions<Share>>
+		queryPartial(input: QueryPartial<Share>): Promise<Array<Partial<Share>>>
+		groupAggregate2(input: GroupAggregateQuery<Share>): Promise<Record<string, number | null | undefined>>
+		groupAggregate(input: GroupAggregateQuery<Share>): Promise<Record<string, number | null | undefined>>
+		query(input: Query<Share>): Promise<Array<Share>>
+		count(input: Condition<Share>): Promise<number>
+		groupCount(input: GroupCountQuery<Share>): Promise<Record<string, number>>
+		insertBulk(input: Array<Share>): Promise<Array<Share>>
+		bulkReplace(input: Array<Share>): Promise<Array<Share>>
+		bulkModify(input: MassModification<Share>): Promise<number>
+		groupCount2(input: GroupCountQuery<Share>): Promise<Record<string, number>>
+		bulkDelete(input: Condition<Share>): Promise<number>
+		aggregate(input: AggregateQuery<Share>): Promise<number | null | undefined>
+		detail(id: Share.ID): Promise<Share>
+		upsert(id: Share.ID, input: Share): Promise<Share>
+		replace(id: Share.ID, input: Share): Promise<Share>
+		modify(id: Share.ID, input: Modification<Share>): Promise<Share>
+		delete(id: Share.ID): Promise<void>
+		simplifiedModify(id: Share.ID, input: Partial<Share>): Promise<Share>
+		modifyWithDiff(id: Share.ID, input: Modification<Share>): Promise<EntryChange<Share>>
+	}
 	readonly fileSystem: {
 	}
 	readonly meta: {
@@ -521,6 +578,15 @@ export class LiveApi implements Api {
 		modifyWithDiff: (id, input) => this.fetcher(`/users/${id}/delta`, "PATCH", input),
 	}
 	readonly userAuth: Api["userAuth"] = {
+		getSelf: () => this.fetcher(`/auth/session/self`, "GET", undefined),
+		terminateCurrentSession: () => this.fetcher(`/auth/session/terminate`, "POST", undefined),
+		logIn: (input) => this.fetcher(`/auth/session/login`, "POST", input),
+		checkProofs: (input) => this.fetcher(`/auth/session/proofs-check`, "POST", input),
+		createSubSession: (input) => this.fetcher(`/auth/session/sub-session`, "POST", input),
+		authenticationRequirements: () => this.fetcher(`/auth/session/auth-requirements`, "GET", undefined),
+		logInWithLimitations: (input) => this.fetcher(`/auth/session/login2`, "POST", input),
+		getTokenSimple: (input) => this.fetcher(`/auth/session/token/simple`, "POST", input),
+		terminateSession: (sessionId) => this.fetcher(`/auth/session/${sessionId}/terminate`, "POST", undefined),
 		list: (input) => this.fetcher(`/auth/session/sessions`, "GET", input),
 		insert: (input) => this.fetcher(`/auth/session/sessions`, "POST", input),
 		permissions: () => this.fetcher(`/auth/session/sessions/_permissions_`, "GET", undefined),
@@ -545,15 +611,6 @@ export class LiveApi implements Api {
 		modifyWithDiff: (id, input) => this.fetcher(`/auth/session/sessions/${id}/delta`, "PATCH", input),
 		proveEmailOwnership: (input) => this.fetcher(`/auth/proof/email/prove`, "POST", input),
 		beginEmailOwnershipProof: (input) => this.fetcher(`/auth/proof/email/start`, "POST", input),
-		getSelf: () => this.fetcher(`/auth/session/self`, "GET", undefined),
-		terminateCurrentSession: () => this.fetcher(`/auth/session/terminate`, "POST", undefined),
-		logIn: (input) => this.fetcher(`/auth/session/login`, "POST", input),
-		checkProofs: (input) => this.fetcher(`/auth/session/proofs-check`, "POST", input),
-		createSubSession: (input) => this.fetcher(`/auth/session/sub-session`, "POST", input),
-		authenticationRequirements: () => this.fetcher(`/auth/session/auth-requirements`, "GET", undefined),
-		logInWithLimitations: (input) => this.fetcher(`/auth/session/login2`, "POST", input),
-		getTokenSimple: (input) => this.fetcher(`/auth/session/token/simple`, "POST", input),
-		terminateSession: (sessionId) => this.fetcher(`/auth/session/${sessionId}/terminate`, "POST", undefined),
 	}
 	readonly vault: Api["vault"] = {
 		list: (input) => this.fetcher(`/vault`, "GET", input),
@@ -616,6 +673,33 @@ export class LiveApi implements Api {
 		delete: (id) => this.fetcher(`/note/${id}`, "DELETE", undefined),
 		simplifiedModify: (id, input) => this.fetcher(`/note/${id}/simplified`, "PATCH", input),
 		modifyWithDiff: (id, input) => this.fetcher(`/note/${id}/delta`, "PATCH", input),
+	}
+	readonly share: Api["share"] = {
+		viewSharedNote: (input) => this.fetcher(`/share/view`, "POST", input),
+		stopSharing: (input) => this.fetcher(`/share/stop`, "POST", input),
+		shareNote: (input) => this.fetcher(`/share/create`, "POST", input),
+		list: (input) => this.fetcher(`/share`, "GET", input),
+		insert: (input) => this.fetcher(`/share`, "POST", input),
+		permissions: () => this.fetcher(`/share/_permissions_`, "GET", undefined),
+		queryPartial: (input) => this.fetcher(`/share/query-partial`, "POST", input),
+		groupAggregate2: (input) => this.fetcher(`/share/group-aggregate-2`, "POST", input),
+		groupAggregate: (input) => this.fetcher(`/share/group-aggregate`, "POST", input),
+		query: (input) => this.fetcher(`/share/query`, "POST", input),
+		count: (input) => this.fetcher(`/share/count`, "POST", input),
+		groupCount: (input) => this.fetcher(`/share/group-count`, "POST", input),
+		insertBulk: (input) => this.fetcher(`/share/bulk`, "POST", input),
+		bulkReplace: (input) => this.fetcher(`/share/bulk`, "PUT", input),
+		bulkModify: (input) => this.fetcher(`/share/bulk`, "PATCH", input),
+		groupCount2: (input) => this.fetcher(`/share/group-count-2`, "POST", input),
+		bulkDelete: (input) => this.fetcher(`/share/bulk-delete`, "POST", input),
+		aggregate: (input) => this.fetcher(`/share/aggregate`, "POST", input),
+		detail: (id) => this.fetcher(`/share/${id}`, "GET", undefined),
+		upsert: (id, input) => this.fetcher(`/share/${id}`, "POST", input),
+		replace: (id, input) => this.fetcher(`/share/${id}`, "PUT", input),
+		modify: (id, input) => this.fetcher(`/share/${id}`, "PATCH", input),
+		delete: (id) => this.fetcher(`/share/${id}`, "DELETE", undefined),
+		simplifiedModify: (id, input) => this.fetcher(`/share/${id}/simplified`, "PATCH", input),
+		modifyWithDiff: (id, input) => this.fetcher(`/share/${id}/delta`, "PATCH", input),
 	}
 	readonly fileSystem: Api["fileSystem"] = {
 	}

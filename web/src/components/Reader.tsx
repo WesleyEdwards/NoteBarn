@@ -10,9 +10,10 @@ interface ReaderProps {
   text: string
   path: string
   paths: readonly string[]
-  onOpenLink(target: string): void
-  /** Ticking a checkbox edits the note. */
-  onChangeText(text: string): void
+  /** Without it, links to other notes are plain text (on a shared note, say). */
+  onOpenLink?(target: string): void
+  /** Ticking a checkbox edits the note. Without it, checkboxes can't be ticked. */
+  onChangeText?(text: string): void
 }
 
 const remarkPlugins = [remarkGfm, remarkBreaks, remarkWikilinks]
@@ -27,6 +28,7 @@ export const Reader = memo(function Reader({text, path, paths, onOpenLink, onCha
   const components: Components = {
     a({href, children}) {
       if (href?.startsWith(WIKILINK_PREFIX)) {
+        if (!onOpenLink) return <span className="internal-link plain">{children}</span>
         const target = decodeURIComponent(href.slice(WIKILINK_PREFIX.length))
         const exists = resolveWikilink(parseWikilink(target).target, path, paths) !== null
         return (
@@ -48,13 +50,14 @@ export const Reader = memo(function Reader({text, path, paths, onOpenLink, onCha
         const link = parseWikilink(target)
         const name = link.target
         const note = !/\.[a-z0-9]+$/i.test(name) || isTextFile(name)
+        if (note && !onOpenLink) return <span className="embed-link plain">↪ {children}</span>
         return note ? (
           <a
             href="#"
             className="embed-link"
             onClick={(e) => {
               e.preventDefault()
-              onOpenLink(target)
+              onOpenLink?.(target)
             }}
           >
             ↪ {children}
@@ -91,6 +94,7 @@ export const Reader = memo(function Reader({text, path, paths, onOpenLink, onCha
     const target = e.target as HTMLElement
     if (!(target instanceof HTMLInputElement) || target.type !== "checkbox") return
     e.preventDefault()
+    if (!onChangeText) return
     const boxes = [...(container.current?.querySelectorAll("input.task-checkbox") ?? [])]
     const index = boxes.indexOf(target)
     if (index < 0) return

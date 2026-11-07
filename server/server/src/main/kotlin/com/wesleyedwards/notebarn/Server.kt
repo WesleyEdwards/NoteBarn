@@ -31,6 +31,7 @@ import com.lightningkite.services.files.PublicFileSystem
 import com.lightningkite.services.files.s3.S3PublicFileSystem
 import com.wesleyedwards.notebarn.UserAuth.RoleCache.userRole
 import com.wesleyedwards.notebarn.data.NoteEndpoints
+import com.wesleyedwards.notebarn.data.ShareEndpoints
 import com.wesleyedwards.notebarn.data.UserEndpoints
 import com.wesleyedwards.notebarn.data.VaultEndpoints
 
@@ -76,6 +77,7 @@ object Server : ServerBuilder() {
 
     val vault =           path.path("vault")     module VaultEndpoints
     val note =            path.path("note")      module NoteEndpoints
+    val share =           path.path("share")     module ShareEndpoints
 
     /** Serves and accepts attachments' bytes when they're stored on this server's disk (local development). */
     val fileEndpoints =   path.path("files")     module FileSystemEndpoints(files)

@@ -60,7 +60,7 @@ export class AttachmentLinks {
 
 /** What the reader needs to show attachments: the vault's file list, and links to their bytes. */
 export interface AttachmentContextValue {
-  links: AttachmentLinks
+  links: Pick<AttachmentLinks, "cached" | "url">
   /** The hash of the attachment at `path`, or null if there's none. */
   hashOf(path: string): string | null
 }

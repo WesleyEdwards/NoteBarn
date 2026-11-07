@@ -338,3 +338,50 @@ data class RestoreVersion(
     val id: NoteVersion.ID,
     val baseVersion: Long? = null,
 )
+
+
+/**
+ * A link anyone can use to read one note, as it is whenever they open it, until its owner stops sharing it. The
+ * [_id] is the link's secret. When the note is renamed in the web app the share follows it; deleting the note ends it.
+ */
+@Serializable
+@GenerateDataClassPaths
+@IndexSet(["vault", "path"], unique = IndexUniqueness.Unique)
+data class Share(
+    override val _id: ID = ID(),
+    override val owner: User.ID,
+    val vault: Vault.ID,
+    val path: String,
+    val createdAt: Instant = now(),
+) : HasOwner<Share.ID> {
+
+    @JvmInline
+    @Serializable
+    value class ID(override val raw: Uuid = Uuid.random()) : TypedId<Uuid, ID> {
+        override fun toString(): String = raw.toString()
+    }
+}
+
+@Serializable
+data class ShareNote(
+    val vault: Vault.ID,
+    val path: String,
+)
+
+/** A shared note as anyone with its link sees it: its name but not its folder, and only the files it shows. */
+@Serializable
+data class SharedNote(
+    val title: String,
+    val content: String,
+    val modifiedAt: Instant,
+    val attachments: List<SharedAttachment>,
+)
+
+/** A file a shared note shows, by the [target] its embed names (like `photo.png` in `![[photo.png]]`). */
+@Serializable
+data class SharedAttachment(
+    val target: String,
+    val hash: String,
+    /** A download link that lasts an hour. */
+    val url: String,
+)
