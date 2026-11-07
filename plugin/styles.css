@@ -31,3 +31,9 @@
 .notebarn-muted {
   color: var(--text-muted);
 }
+
+/* Claude: text field above its button, instead of beside it. */
+.notebarn-stacked .setting-item-control {
+  flex-direction: column;
+  align-items: stretch;
+}

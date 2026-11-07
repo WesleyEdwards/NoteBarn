@@ -46,7 +46,6 @@ server vault. "Preview" shows what a sync would do without changing anything.
   compares everything at startup and every 10 minutes.
 - The first sync with a server vault never deletes anything: files that differ on the two sides become conflict copies.
 - Files deleted by sync go to Obsidian's trash (following its "Deleted files" setting), so they can be restored.
-- Safety lock: until you turn off "Only sync the test-sync vault" in its settings, it won't touch any other vault.
 - Its state lives in `.obsidian/plugins/notebarn/` (`sync-state.json` plus the last-synced text of each note in
   `bases/`). Deleting that folder's state just makes the next sync a first sync again.
 
@@ -74,7 +73,7 @@ plugin installed in it, even on a device that already has another vault syncing.
 2. In BRAT, "Add beta plugin": `WesleyEdwards/notebarn`. Enable
    **Notebarn**. (Or, on desktop, copy `plugin/main.js`, `manifest.json` and `styles.css` from a build into
    `<vault>/.obsidian/plugins/notebarn/`, but then updates are by hand.)
-3. In Notebarn's settings, sign in, then turn off **Only sync the "test-sync" vault** (it's on in every new vault).
+3. In Notebarn's settings, sign in.
 4. Choose the server vault (below), then run **Preview sync** before the first real sync, and check what it plans.
 
 **An existing vault, not on the server yet** (e.g. a desktop vault with notes in it):

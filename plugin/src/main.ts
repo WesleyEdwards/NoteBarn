@@ -12,8 +12,6 @@ interface Settings {
   email: string
   vaultId: string
   vaultName: string
-  /** While trying it out: only sync a vault named "test-sync". */
-  onlyTestVault: boolean
   pollSeconds: number
 }
 
@@ -23,11 +21,9 @@ const DEFAULT_SETTINGS: Settings = {
   email: "",
   vaultId: "",
   vaultName: "",
-  onlyTestVault: true,
   pollSeconds: 10
 }
 
-const TEST_VAULT = "test-sync"
 /** Compare everything (which also catches anything polling missed) this often. */
 const FULL_SYNC_MS = 10 * 60 * 1000
 /** Wait this long after the last edit to a file before sending it. */
@@ -102,8 +98,6 @@ export default class NotebarnPlugin extends Plugin {
   get blocker(): string | null {
     if (!this.settings.sessionToken) return "Not signed in"
     if (!this.settings.vaultId) return "No server vault chosen"
-    if (this.settings.onlyTestVault && this.app.vault.getName() !== TEST_VAULT)
-      return `Only syncs the "${TEST_VAULT}" vault (see settings)`
     return null
   }
 
@@ -309,18 +303,6 @@ class NotebarnSettingTab extends PluginSettingTab {
     else this.vaultSection(containerEl)
 
     new Setting(containerEl)
-      .setName(`Only sync the "${TEST_VAULT}" vault`)
-      .setDesc("A safety lock while trying sync out. Turn it off once you trust it with a real vault (back the vault up first).")
-      .addToggle((t) =>
-        t.setValue(s.onlyTestVault).onChange(async (v) => {
-          s.onlyTestVault = v
-          await this.plugin.saveSettings()
-          await this.plugin.restart()
-          this.display()
-        })
-      )
-
-    new Setting(containerEl)
       .setName("Check for changes every")
       .setDesc("Also checks whenever you come back to Obsidian. Takes effect after restarting Obsidian.")
       .addDropdown((d) =>
@@ -353,6 +335,7 @@ class NotebarnSettingTab extends PluginSettingTab {
     new Setting(el)
       .setName("Email")
       .setDesc("We'll send you a sign-in code.")
+      .setClass("notebarn-stacked")
       .addText((t) => {
         t.inputEl.type = "email"
         t.setPlaceholder("you@example.com")
@@ -376,6 +359,7 @@ class NotebarnSettingTab extends PluginSettingTab {
     if (!this.proofKey) return
     new Setting(el)
       .setName("Code")
+      .setClass("notebarn-stacked")
       .addText((t) => {
         t.inputEl.inputMode = "numeric"
         t.inputEl.autocomplete = "one-time-code"
