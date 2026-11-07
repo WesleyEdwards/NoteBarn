@@ -8,7 +8,8 @@ server/     LightningServer (Kotlin): vaults, notes, versioned writes, change fe
 shared/     TypeScript used by both clients: generated API client, merge, paths, and the sync engine.
 web/        React + Vite + CodeMirror 6 web app (installable PWA, works offline).
 plugin/     Obsidian plugin (desktop and the mobile app) that syncs a vault using shared/'s sync engine.
-test-sync/  Scratch vault for trying the plugin. Its .obsidian folder is gitignored (it holds your session).
+test-sync/  Scratch vault with a few sample notes for trying the plugin. Its .obsidian folder is gitignored (it holds
+            your session).
 ```
 
 The TypeScript packages are one npm workspace: run `npm install` once at the top level.
@@ -54,9 +55,9 @@ server vault. "Preview" shows what a sync would do without changing anything.
 Phones install it with the BRAT plugin, from this repo's GitHub releases. To release a new version:
 
 ```bash
-node plugin/release.mjs 0.1.2   # sets the version everywhere, including the root manifest.json BRAT reads
-git add -A manifest.json versions.json package-lock.json plugin .github && git commit -m "Notebarn 0.1.2"
-git tag 0.1.2 && git push && git push origin 0.1.2
+node plugin/release.mjs 0.1.4   # sets the version everywhere, including the root manifest.json BRAT reads
+git add -A manifest.json versions.json package-lock.json plugin .github && git commit -m "Notebarn 0.1.4"
+git tag 0.1.4 && git push && git push origin 0.1.4
 ```
 
 The tag starts `.github/workflows/plugin-release.yml`, which tests, builds and publishes the release. BRAT picks up
