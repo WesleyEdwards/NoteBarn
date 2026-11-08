@@ -1,6 +1,6 @@
 import {type App, Modal, Notice, Platform, Plugin, PluginSettingTab, Setting, TFile, TFolder, type TAbstractFile} from "obsidian"
 import type {LiveApi, Vault} from "@notebarn/shared/api"
-import {HttpError, isServerRejection} from "@notebarn/shared/errors"
+import {HttpError} from "@notebarn/shared/errors"
 import {SyncEngine, remoteVault, type SyncAction, type SyncStatus} from "@notebarn/shared/sync/SyncEngine"
 import {anonymousApi, obsidianTransfer, sessionApi} from "./client"
 import {ObsidianFiles} from "./ObsidianFiles"
@@ -136,6 +136,10 @@ export default class NotebarnPlugin extends Plugin {
         onConflict: (path, copy) => {
           this.addLog(`Couldn't merge ${path}; your version is in ${copy}`)
           new Notice(`Notebarn: edits to "${path}" couldn't be merged. Your version was kept as "${copy}".`, 15000)
+        },
+        onSkipped: (path, message) => {
+          this.addLog(`Skipped ${path}: ${message}`)
+          new Notice(`Notebarn: couldn't sync "${path}" on this device, so it was skipped: ${message}`, 15000)
         }
       },
       {isSyncable}
@@ -235,8 +239,9 @@ export default class NotebarnPlugin extends Plugin {
   private reportError(what: string, e: unknown) {
     const message = e instanceof Error ? e.message : String(e)
     this.addLog(`${what} failed: ${message}`)
-    // Offline is normal (it retries); only a refusal from the server needs attention.
-    if (isServerRejection(e) && !(e instanceof HttpError && e.status === 401)) new Notice(`Notebarn: ${what} failed: ${message}`, 10000)
+    // Claude: Being offline (a TypeError) is normal and retries by itself. Mobile has no status bar, so anything else
+    // needs a notice.
+    if (!(e instanceof TypeError) && !(e instanceof HttpError && e.status === 401)) new Notice(`Notebarn: ${what} failed: ${message}`, 10000)
   }
 
   addLog(line: string) {

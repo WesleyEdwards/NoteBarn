@@ -120,6 +120,8 @@ export interface SyncEvents {
   onAction?(action: SyncAction): void
   /** Edits couldn't be merged, so the local version was kept as `copyPath`. */
   onConflict?(path: string, copyPath: string): void
+  /** This device couldn't handle `path` (a name it doesn't allow, say), so it was skipped until the next full sync. */
+  onSkipped?(path: string, message: string): void
 }
 
 export interface SyncEngineOptions {
@@ -270,25 +272,33 @@ export class SyncEngine {
   /** Decides and acts for one path until both sides agree (or it's clear something else is changing it). */
   private async syncPath(change: Change): Promise<void> {
     let server = change.server
-    for (let round = 0; round < MAX_ROUNDS; round++) {
-      const {hash: localHash, text: content} = await this.readLocal(change.path)
-      const base = await this.bases.get(change.path)
+    try {
+      for (let round = 0; round < MAX_ROUNDS; round++) {
+        const {hash: localHash, text: content} = await this.readLocal(change.path)
+        const base = await this.bases.get(change.path)
 
-      // A local change with nothing known about the server: assume it's still at base, and let the server say if not.
-      const assumed: ServerState | null =
-        server !== undefined ? server : base ? {version: base.version, hash: base.hash, deleted: false} : null
-      const decision = decide(localHash, base, assumed)
-      if (decision.kind === "none") return
+        // A local change with nothing known about the server: assume it's still at base, and let the server say if
+        // not.
+        const assumed: ServerState | null =
+          server !== undefined ? server : base ? {version: base.version, hash: base.hash, deleted: false} : null
+        const decision = decide(localHash, base, assumed)
+        if (decision.kind === "none") return
 
-      const next = isTextFile(change.path)
-        ? await this.act(change.path, decision, content, localHash, base, server ?? null)
-        : await this.actOnAttachment(change.path, decision, localHash, server ?? null)
-      if (next === "done") {
-        this.events.onAction?.({path: change.path, decision: decision.kind})
-        return
+        const next = isTextFile(change.path)
+          ? await this.act(change.path, decision, content, localHash, base, server ?? null)
+          : await this.actOnAttachment(change.path, decision, localHash, server ?? null)
+        if (next === "done") {
+          this.events.onAction?.({path: change.path, decision: decision.kind})
+          return
+        }
+        // Something changed under us: `next` is what the server has now (or undefined to look again).
+        server = next === "again" ? server : next
       }
-      // Something changed under us: `next` is what the server has now (or undefined to look again).
-      server = next === "again" ? server : next
+    } catch (e) {
+      // Claude: Offline or refused stops the whole sync. Anything else is about this one file here, so it mustn't
+      // hold up the others.
+      if (e instanceof TypeError || isServerRejection(e)) throw e
+      this.events.onSkipped?.(change.path, e instanceof Error ? e.message : String(e))
     }
   }
 

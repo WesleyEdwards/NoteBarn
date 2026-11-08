@@ -171,6 +171,30 @@ describe("SyncEngine after syncing", () => {
     expect(server.live()).toEqual({"N.md": "a"})
   })
 
+  it("skips a file this device can't write instead of stopping, and tries it again on the next full sync", async () => {
+    const skipped: string[] = []
+    const server = new FakeServer()
+    const files = new MemoryFiles()
+    const write = files.write.bind(files)
+    // Like Obsidian on Android, which refuses some characters in file names.
+    files.write = async (path, content, expected) => {
+      if (path.includes("?")) throw new Error("File name cannot contain any of the following characters: ?")
+      return write(path, content, expected)
+    }
+    const engine = new SyncEngine(files, new MemoryBases(), server, {onSkipped: (p) => skipped.push(p)})
+    await server.put("A?.md", "bad")
+    await server.put("B.md", "b")
+    await engine.fullSync()
+    expect(files.snapshot()).toEqual({"B.md": "b"})
+
+    await server.put("A?.md", "bad again")
+    await server.put("C.md", "c")
+    await engine.pull()
+    expect(files.snapshot()).toEqual({"B.md": "b", "C.md": "c"})
+    await engine.fullSync()
+    expect(skipped).toEqual(["A?.md", "A?.md", "A?.md"])
+  })
+
   it("fetches many downloads in pages instead of one request each", async () => {
     const {server, files, engine} = setUp()
     for (let i = 0; i < 30; i++) await server.put(`n${i}.md`, `note ${i}`)
