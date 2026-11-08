@@ -103,6 +103,7 @@ object WesleyDeployment : TerraformAwsServerlessDomainBuilder<Server>(Server) {
         secretBasis.generated()
         telemetrySettings.direct(TelemetryBackend.Settings())
         allowedEmails.byVariable()
+        admins.byVariable()
 
         loggingSettings.direct(
             LoggingSettings(
@@ -153,7 +154,7 @@ object WesleyDeployment : TerraformAwsServerlessDomainBuilder<Server>(Server) {
         fun main(vararg args: String) {
             ProcessBuilder("./gradlew", "server:lambda").inheritIO().start().waitFor()
             println("Deploying Notebarn...")
-            deploy(false)
+            deploy(true)
         }
     }
 }

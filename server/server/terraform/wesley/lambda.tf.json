@@ -287,7 +287,8 @@
                 "maxSpansPerSecond": null,
                 "maxLogsPerSecond": null
             },
-            "email": "smtp://${aws_iam_access_key.email.id}:${aws_iam_access_key.email.ses_smtp_password_v4}@email-smtp.us-west-2.amazonaws.com:587?fromEmail=noreply@api.notebarn.a.wesleyedwards.xyz"
+            "email": "smtp://${aws_iam_access_key.email.id}:${aws_iam_access_key.email.ses_smtp_password_v4}@email-smtp.us-west-2.amazonaws.com:587?fromEmail=noreply@api.notebarn.a.wesleyedwards.xyz",
+            "admins": "${var.admins}"
         },
         "is_windows": "${substr(pathexpand(\"~\"), 0, 1) == \"/\" ? false : true}",
         "servicesAccessPolicy": {

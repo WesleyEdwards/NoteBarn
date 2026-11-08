@@ -33,7 +33,7 @@ object UserAuth : PrincipalType<User, User.ID>, ServerBuilder() {
     context(server: ServerRuntime)
     override suspend fun fetchByProperty(property: String, value: String): User? = when (property) {
         "email" -> {
-            if (!emailAllowed(Server.allowedEmails(), value)) throw ForbiddenException("This email isn't allowed to log in.")
+            if (!canLogIn(value)) throw ForbiddenException("This email isn't allowed to log in.")
             User.info.table().run {
                 findOne(condition { it.email eq value.toEmailAddress() })
                     ?: insertOne(User(email = value.toEmailAddress()))
@@ -43,6 +43,10 @@ object UserAuth : PrincipalType<User, User.ID>, ServerBuilder() {
         else -> super.fetchByProperty(property, value)
     }
 
+    context(_: ServerRuntime)
+    private fun canLogIn(email: String): Boolean =
+        emailAllowed(Server.allowedEmails(), email) || emailListed(Server.admins(), email)
+
     override val precache: List<AuthCacheKey<User, *>> = listOf(RoleCache)
 
     object RoleCache : AuthCacheKey<User, UserRole> {
@@ -51,7 +55,10 @@ object UserAuth : PrincipalType<User, User.ID>, ServerBuilder() {
         override val expireAfter: Duration = 5.minutes
 
         context(_: ServerRuntime)
-        override suspend fun calculate(input: Authentication<User>): UserRole = input.fetch().role
+        override suspend fun calculate(input: Authentication<User>): UserRole {
+            val user = input.fetch()
+            return if (emailListed(Server.admins(), user.email.raw)) UserRole.Root else user.role
+        }
 
         context(_: ServerRuntime)
         suspend fun Authentication<User>.userRole() = get(RoleCache)
@@ -68,7 +75,7 @@ object UserAuth : PrincipalType<User, User.ID>, ServerBuilder() {
     context(_: ServerRuntime)
     private fun codeEmail(to: String, pin: String): Email {
         // Checked here so no code is ever emailed to an address that couldn't use it.
-        if (!emailAllowed(Server.allowedEmails(), to)) throw ForbiddenException("This email isn't allowed to log in.")
+        if (!canLogIn(to)) throw ForbiddenException("This email isn't allowed to log in.")
         val minutes = pins.expiration.inWholeMinutes
         return Email(
             subject = "Your Notebarn code is $pin",

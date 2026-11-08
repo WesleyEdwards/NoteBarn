@@ -25,7 +25,8 @@ npm install && cd web && npm run dev
 ```
 
 Locally `allowedEmails` is `["*"]` and email is `console`, so sign in with any address and copy the code from the
-server's output. Open the dev URL on your phone (same Wi-Fi, `http://<computer-ip>:8917`) to try it there.
+server's output. To be an admin, put your email in `admins` in `server/settings.json` (it doesn't take `"*"`). Open
+the dev URL on your phone (same Wi-Fi, `http://<computer-ip>:8917`) to try it there.
 
 After changing server endpoints or models, regenerate the TypeScript SDK (in `shared/src/api.ts`) while the server
 runs: `cd shared && npm run generate-sdk`.
@@ -113,7 +114,8 @@ Server (Lambda, Mongo Atlas free tier, SES email, DynamoDB cache):
 1. Run `WesleyDeployment.EditSettings.main` to create or edit the encrypted `server/wesley-aws-settings` (put its
    password in `server/local.properties` as `DEPLOYMENT_SETTINGS_KEY`).
 2. Run `WesleyDeployment.Deploy.main`. It deploys to `api.notebarn.a.wesleyedwards.xyz`; only the emails in
-   `allowedEmails` can sign in. That list is kept in `wesley-aws-settings`, not in git; change it with step 1.
+   `allowedEmails` or `admins` can sign in, and those in `admins` get the Root role (for the admin endpoints, like
+   `/meta`). Both lists are kept in `wesley-aws-settings`, not in git; change them with step 1.
 
 Web: `cd web && npm run deploy` (S3 + CloudFront at `notebarn.a.wesleyedwards.xyz`, Terraform state in the
 `wesleyedwards-terraform` bucket under `notebarn/`). On the phone, open it and use **Add to Home Screen**.

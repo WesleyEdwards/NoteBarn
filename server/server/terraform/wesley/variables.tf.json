@@ -2,6 +2,9 @@
     "variable": {
         "allowedEmails": {
             "type": "list(string)"
+        },
+        "admins": {
+            "type": "list(string)"
         }
     }
 }

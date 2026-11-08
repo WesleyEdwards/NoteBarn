@@ -260,4 +260,10 @@ class AllowedEmailsTest {
         assertTrue(emailAllowed(listOf("*"), "anyone@example.com"))
         assertFalse(emailAllowed(emptyList(), "me@example.com"))
     }
+
+    @Test
+    fun `a star lists nobody as an admin`() {
+        assertTrue(emailListed(listOf("Me@Example.com"), " me@example.com "))
+        assertFalse(emailListed(listOf("*"), "anyone@example.com"))
+    }
 }

@@ -53,6 +53,12 @@ object Server : ServerBuilder() {
      */
     val allowedEmails = setting("allowedEmails", emptyList<String>())
 
+    /**
+     * Who gets the Root role (so may use the admin endpoints, like /meta's). They may log in even if they aren't in
+     * [allowedEmails]. Matched like [allowedEmails], except that "*" matches nobody.
+     */
+    val admins = setting("admins", emptyList<String>())
+
     init {
         install(CorsInterceptor(cors))
         registerBasicMediaTypeCoders()

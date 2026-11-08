@@ -24,5 +24,7 @@ inline fun <reified T : HasOwner<*>> AuthAccess<User>.ownerPerms(
 fun sha256Hex(text: String): String =
     MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
 
-fun emailAllowed(allowed: List<String>, email: String): Boolean =
-    allowed.any { it == "*" || it.equals(email.trim(), ignoreCase = true) }
+fun emailAllowed(allowed: List<String>, email: String): Boolean = "*" in allowed || emailListed(allowed, email)
+
+/** Returns `true` if [list] has [email], ignoring case. Unlike [emailAllowed], `"*"` matches nothing. */
+fun emailListed(list: List<String>, email: String): Boolean = list.any { it.equals(email.trim(), ignoreCase = true) }
