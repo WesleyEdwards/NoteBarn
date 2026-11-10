@@ -42,8 +42,20 @@ function obsidianFetcher(baseUrl: string, token: () => Promise<string | null>): 
 export const anonymousApi = (serverUrl: string) => new LiveApi(obsidianFetcher(serverUrl, async () => null))
 
 /**
- * An API client for a signed-in session. The long-lived session token is traded for a short-lived access token,
- * refreshed every few minutes. `onSignedOut` runs if the server no longer accepts the session.
+ * The Live Changes websocket for a vault on the server at `serverUrl`. A server deployed to AWS takes websockets on
+ * their own domain, `ws.` in front of its own; one running anywhere else takes them at its own address. If neither is
+ * right, the connection just never opens and the plugin keeps polling.
+ */
+export function liveChangesUrl(serverUrl: string, vault: string, accessToken: string) {
+  const url = new URL(serverUrl)
+  const host = url.protocol === "https:" ? `wss://ws.${url.host}` : `ws://${url.host}`
+  return `${host}/?path=${encodeURIComponent("/note/live")}&vault=${encodeURIComponent(vault)}&jwt=${encodeURIComponent(accessToken)}`
+}
+
+/**
+ * An API client for a signed-in session, and the access token it uses. The long-lived session token is traded for a
+ * short-lived access token, refreshed every few minutes. `onSignedOut` runs if the server no longer accepts the
+ * session.
  */
 export function sessionApi(serverUrl: string, sessionToken: string, onSignedOut: () => void) {
   const anon = anonymousApi(serverUrl)
@@ -68,7 +80,7 @@ export function sessionApi(serverUrl: string, sessionToken: string, onSignedOut:
       })
     return pending
   }
-  return new LiveApi(obsidianFetcher(serverUrl, getToken))
+  return {api: new LiveApi(obsidianFetcher(serverUrl, getToken)), accessToken: getToken}
 }
 
 /**

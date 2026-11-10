@@ -28,7 +28,7 @@ const MAX_BACKOFF_MS = 30_000
 /**
  * A websocket to the server's Live Changes endpoint that keeps itself open: reconnecting with backoff when it drops,
  * straight away when the page comes back into view or the device comes back online, and sending a keepalive so idle
- * connections aren't closed. It only passes on nudges; VaultStore asks for the actual changes.
+ * connections aren't closed. It only passes on nudges; the caller asks for the actual changes.
  */
 export class LiveConnection {
   private socket: SocketLike | null = null
@@ -136,7 +136,7 @@ export class LiveConnection {
 
   private retry() {
     if (this.stopped || this.retryTimer) return
-    // A little jitter so a server restart doesn't get every tab back at the same moment.
+    // A little jitter so a server restart doesn't get every client back at the same moment.
     const delay = this.backoff * (0.75 + Math.random() * 0.5)
     this.backoff = Math.min(this.backoff * 2, MAX_BACKOFF_MS)
     this.retryTimer = setTimeout(() => {

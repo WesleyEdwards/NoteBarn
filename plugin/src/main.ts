@@ -1,8 +1,9 @@
 import {type App, Modal, Notice, Platform, Plugin, PluginSettingTab, Setting, TFile, TFolder, type TAbstractFile} from "obsidian"
 import type {LiveApi, Vault} from "@notebarn/shared/api"
 import {HttpError} from "@notebarn/shared/errors"
+import {LiveConnection} from "@notebarn/shared/sync/LiveConnection"
 import {SyncEngine, remoteVault, type SyncAction, type SyncStatus} from "@notebarn/shared/sync/SyncEngine"
-import {anonymousApi, obsidianTransfer, sessionApi} from "./client"
+import {anonymousApi, liveChangesUrl, obsidianTransfer, sessionApi} from "./client"
 import {ObsidianFiles} from "./ObsidianFiles"
 import {PluginBaseStore} from "./PluginBaseStore"
 
@@ -26,6 +27,8 @@ const DEFAULT_SETTINGS: Settings = {
 
 /** Compare everything (which also catches anything polling missed) this often. */
 const FULL_SYNC_MS = 10 * 60 * 1000
+/** While the live connection is up, check for changes this often anyway, in case a nudge went missing. */
+const LIVE_POLL_MS = 5 * 60 * 1000
 /** Wait this long after the last edit to a file before sending it. */
 const EDIT_DELAY_MS = 1500
 
@@ -44,13 +47,18 @@ const ACTION_LABELS: Record<SyncAction["decision"], string> = {
 export default class NotebarnPlugin extends Plugin {
   settings: Settings = {...DEFAULT_SETTINGS}
   api: LiveApi | null = null
+  private accessToken: (() => Promise<string>) | null = null
   engine: SyncEngine | null = null
+  private live: LiveConnection | null = null
   private bases: PluginBaseStore | null = null
   private statusEl: HTMLElement | null = null
   private status: SyncStatus | "off" = "off"
   private statusMessage = ""
   private pending = new Map<string, number>()
   private lastFullSync = 0
+  private lastPull = 0
+  private pulling: Promise<void> | null = null
+  private pullAgain = false
   readonly log: string[] = []
 
   async onload() {
@@ -75,8 +83,13 @@ export default class NotebarnPlugin extends Plugin {
       void this.restart()
     })
 
-    this.registerInterval(window.setInterval(() => this.tick(), this.settings.pollSeconds * 1000))
-    // Coming back to the window (or, on a phone, back to the app): check right away.
+    this.registerInterval(
+      window.setInterval(() => {
+        if (!this.live?.isOpen || Date.now() - this.lastPull > LIVE_POLL_MS) this.tick()
+      }, this.settings.pollSeconds * 1000)
+    )
+    // Coming back to the window (or, on a phone, back to the app): check right away, even if the live connection looks
+    // open, since a paused app's socket can be dead without knowing it yet.
     this.registerDomEvent(window, "focus", () => this.tick())
     this.registerDomEvent(document, "visibilitychange", () => {
       if (document.visibilityState === "visible") this.tick()
@@ -86,6 +99,7 @@ export default class NotebarnPlugin extends Plugin {
   }
 
   async onunload() {
+    this.live?.stop()
     for (const timer of this.pending.values()) window.clearTimeout(timer)
     await this.bases?.save()
   }
@@ -102,9 +116,11 @@ export default class NotebarnPlugin extends Plugin {
   }
 
   makeApi() {
-    this.api = this.settings.sessionToken
+    const session = this.settings.sessionToken
       ? sessionApi(this.settings.serverUrl, this.settings.sessionToken, () => void this.signOut("The server ended this session. Sign in again."))
       : null
+    this.api = session?.api ?? null
+    this.accessToken = session?.accessToken ?? null
   }
 
   async signOut(message?: string) {
@@ -119,10 +135,12 @@ export default class NotebarnPlugin extends Plugin {
   /** Rebuilds the engine for the current settings and runs a full sync. */
   async restart() {
     await this.bases?.save()
+    this.live?.stop()
+    this.live = null
     this.engine = null
     this.bases = null
     const blocker = this.blocker
-    if (blocker || !this.api) return this.setStatus("off", blocker ?? "")
+    if (blocker || !this.api || !this.accessToken) return this.setStatus("off", blocker ?? "")
     const dir = this.manifest.dir ?? `${this.app.vault.configDir}/plugins/${this.manifest.id}`
     this.bases = await PluginBaseStore.load(this.app.vault.adapter, dir, this.settings.vaultId)
     const isSyncable = (path: string) => this.isSyncable(path)
@@ -144,6 +162,15 @@ export default class NotebarnPlugin extends Plugin {
       },
       {isSyncable}
     )
+    const {serverUrl, vaultId} = this.settings
+    const accessToken = this.accessToken
+    this.live = new LiveConnection(async () => liveChangesUrl(serverUrl, vaultId, await accessToken()), {
+      opened: () => this.pull(),
+      changed: () => this.pull(),
+      // Polling takes over until it's back.
+      closed: () => {}
+    })
+    this.live.start()
     await this.fullSync()
   }
 
@@ -189,7 +216,26 @@ export default class NotebarnPlugin extends Plugin {
   private tick() {
     if (!this.engine) return
     if (Date.now() - this.lastFullSync > FULL_SYNC_MS) void this.fullSync()
-    else this.engine.pull().catch((e) => this.reportError("Checking for changes", e))
+    else this.pull()
+  }
+
+  /** Brings in the server's changes. Asked again while one is under way, it runs once more after, not once per ask. */
+  private pull() {
+    if (this.pulling) {
+      this.pullAgain = true
+      return
+    }
+    this.pulling = (async () => {
+      do {
+        this.pullAgain = false
+        this.lastPull = Date.now()
+        await this.engine?.pull()
+      } while (this.pullAgain)
+    })()
+      .catch((e) => this.reportError("Checking for changes", e))
+      .finally(() => {
+        this.pulling = null
+      })
   }
 
   private onLocalChange(file: TAbstractFile) {
@@ -309,7 +355,7 @@ class NotebarnSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Check for changes every")
-      .setDesc("Also checks whenever you come back to Obsidian. Takes effect after restarting Obsidian.")
+      .setDesc("Only while the live connection to the server is down; otherwise changes arrive as they happen. Also checks whenever you come back to Obsidian. Takes effect after restarting Obsidian.")
       .addDropdown((d) =>
         d
           .addOptions({"5": "5 seconds", "10": "10 seconds", "30": "30 seconds", "60": "1 minute"})

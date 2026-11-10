@@ -43,8 +43,10 @@ server vault. "Preview" shows what a sync would do without changing anything.
 
 - Syncs every file: notes (`.md`, `.canvas`) as text, and everything else (images, PDFs, audio...) as attachments, up
   to 100 MB each. Skips `.obsidian/`, `.trash/` and other hidden files.
-- Sends a file 1.5 s after you stop editing it; checks the server every 10 s and whenever you come back to Obsidian;
-  compares everything at startup and every 10 minutes.
+- Sends a file 1.5 s after you stop editing it. Hears about the server's changes as they happen over the Live Changes
+  websocket (at `ws.` in front of the server's domain for an `https` server, at the server's own address otherwise),
+  and checks anyway whenever you come back to Obsidian, every 5 minutes, and every 10 s while the websocket is down.
+  Compares everything at startup and every 10 minutes.
 - The first sync with a server vault never deletes anything: files that differ on the two sides become conflict copies.
 - Files deleted by sync go to Obsidian's trash (following its "Deleted files" setting), so they can be restored.
 - Its state lives in `.obsidian/plugins/notebarn/` (`sync-state.json` plus the last-synced text of each note in
@@ -217,7 +219,7 @@ button. The download button at the top of the sidebar saves the whole vault (not
 folders) as a zip, straight from the server.
 
 The web app (`web/src/sync/NoteSession.ts`) saves about 0.7 s after you stop typing, hears about other devices'
-changes straight away over the Live Changes websocket (`web/src/sync/LiveConnection.ts`; it also checks every minute
+changes straight away over the Live Changes websocket (`shared/src/sync/LiveConnection.ts`; it also checks every minute
 in case a nudge went missing, and polls every 5 s while the websocket is down), keeps unsaved edits as a draft on the
 device, and retries while offline. Recently opened notes and the app itself are cached, so it opens without a connection.
 
@@ -226,7 +228,6 @@ device, and retries while offline. Recently opened notes and the app itself are 
 Roughly in priority order.
 
 - Atlas storage: the free tier caps at 512 MB, and note history grows with editing. Show usage on the admin page.
-- Plugin: polls every 10 s instead of using the Live Changes websocket like the web app (battery and data on phones).
 - Attachments: replaced or deleted files' bytes stay in the file store (nothing cleans them up yet, except deleting
   the vault). The web app shows `![[embeds]]` only in reading view, not while editing.
 - Web app: choose the sidebar's sort order, like Obsidian: by name (A–Z, Z–A) or modified time (newest, oldest), kept

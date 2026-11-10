@@ -1,6 +1,6 @@
 import type {Api, Note, NoteSummary, Vault} from "@notebarn/shared/api"
 import {storage} from "../lib/storage"
-import {LiveConnection} from "./LiveConnection"
+import {LiveConnection} from "@notebarn/shared/sync/LiveConnection"
 
 export type ConnectionState = "loading" | "online" | "offline"
 
