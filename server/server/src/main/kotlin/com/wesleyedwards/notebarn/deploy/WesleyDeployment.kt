@@ -100,10 +100,43 @@ object WesleyDeployment : TerraformAwsServerlessDomainBuilder<Server>(Server) {
         database.mongodbAtlasFree(orgId = "66ecfbd6502ea64cc85d1d5c")
         email.awsSesSmtp(awsSesDomainConfiguration("email", emergencyContact))
         files.awsS3Bucket(signedUrlDuration = 12.hours)
+        // Claude: a signed-URL duration is what makes the library's bucket private.
+        backups.awsS3Bucket(signedUrlDuration = 1.hours, forceDestroy = false)
         secretBasis.generated()
         telemetrySettings.direct(TelemetryBackend.Settings())
         allowedEmails.byVariable()
         admins.byVariable()
+
+        emit("errorAlarms") {
+            "resource.aws_cloudwatch_metric_alarm.lambda_errors" {
+                "alarm_name" - "${projectPrefix}_lambda_errors"
+                "alarm_description" - "Notebarn's Lambda crashed or timed out"
+                "namespace" - "AWS/Lambda"
+                "metric_name" - "Errors"
+                "dimensions" { "FunctionName" - expression("aws_lambda_function.main.function_name") }
+                "statistic" - "Sum"
+                "period" - 3600
+                "evaluation_periods" - 1
+                "threshold" - 1
+                "comparison_operator" - "GreaterThanOrEqualToThreshold"
+                "treat_missing_data" - "notBreaching"
+                "alarm_actions" - listOf(expression("aws_sns_topic.emergency.arn"))
+            }
+            "resource.aws_cloudwatch_metric_alarm.http_5xx" {
+                "alarm_name" - "${projectPrefix}_http_5xx"
+                "alarm_description" - "Notebarn's API answered with server errors"
+                "namespace" - "AWS/ApiGateway"
+                "metric_name" - "5xx"
+                "dimensions" { "ApiId" - expression("aws_apigatewayv2_api.http.id") }
+                "statistic" - "Sum"
+                "period" - 3600
+                "evaluation_periods" - 1
+                "threshold" - 3
+                "comparison_operator" - "GreaterThanOrEqualToThreshold"
+                "treat_missing_data" - "notBreaching"
+                "alarm_actions" - listOf(expression("aws_sns_topic.emergency.arn"))
+            }
+        }
 
         loggingSettings.direct(
             LoggingSettings(

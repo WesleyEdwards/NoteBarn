@@ -117,6 +117,16 @@ Server (Lambda, Mongo Atlas free tier, SES email, DynamoDB cache):
    `allowedEmails` or `admins` can sign in, and those in `admins` get the Root role (for the admin endpoints, like
    `/meta`). Both lists are kept in `wesley-aws-settings`, not in git; change them with step 1.
 
+**Backups and alarms.** Every night at 10:00 UTC the server saves the whole database (users, vaults, notes, note
+history, shares) as `<date>.json.gz` in a private `notebarn-backups…` S3 bucket and keeps the newest 30. Attachments
+aren't in it; they're already in their own bucket. If a backup fails, the `admins` get an email. Separately, AWS emails
+the deployment's contact if the Lambda crashes or times out, or the API returns 3 or more server errors in an hour (as
+well as the generated spend alarms). Confirm the SNS subscription email the first time.
+
+To restore, download a backup from the bucket and load it into an **empty** database (it refuses otherwise): point
+`database` in a settings file at it and run `./gradlew server:run --args="--settings <file> restore <backup>.json.gz"`,
+or run `MainKt` with those arguments from the IDE. Locally, backups go to `server/local/backups/`.
+
 Web: `cd web && npm run deploy` (S3 + CloudFront at `notebarn.a.wesleyedwards.xyz`, Terraform state in the
 `wesleyedwards-terraform` bucket under `notebarn/`). On the phone, open it and use **Add to Home Screen**.
 
@@ -213,7 +223,14 @@ device, and retries while offline. Recently opened notes and the app itself are 
 
 ## Not done yet
 
+Roughly in priority order.
+
+- Atlas storage: the free tier caps at 512 MB, and note history grows with editing. Show usage on the admin page.
+- Plugin: polls every 10 s instead of using the Live Changes websocket like the web app (battery and data on phones).
 - Attachments: replaced or deleted files' bytes stay in the file store (nothing cleans them up yet, except deleting
   the vault). The web app shows `![[embeds]]` only in reading view, not while editing.
 - Web app: choose the sidebar's sort order, like Obsidian: by name (A–Z, Z–A) or modified time (newest, oldest), kept
   per vault on each device. Created time would need a new server field.
+- Shares: check the share ids can't be guessed; maybe an optional expiry.
+- Other people: publishing the plugin is blocked on there being no server strangers can use, either a self-hosting
+  guide (or Docker image) or a hosted multi-user server with abuse and cost limits.

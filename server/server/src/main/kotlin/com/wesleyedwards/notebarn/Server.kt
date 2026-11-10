@@ -29,7 +29,11 @@ import com.lightningkite.services.email.EmailService
 import com.lightningkite.services.email.javasmtp.JavaSmtpEmailService
 import com.lightningkite.services.files.PublicFileSystem
 import com.lightningkite.services.files.s3.S3PublicFileSystem
+import com.lightningkite.lightningserver.definition.ScheduledTask
 import com.wesleyedwards.notebarn.UserAuth.RoleCache.userRole
+import com.wesleyedwards.notebarn.data.Backups
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
 import com.wesleyedwards.notebarn.data.NoteEndpoints
 import com.wesleyedwards.notebarn.data.ShareEndpoints
 import com.wesleyedwards.notebarn.data.UserEndpoints
@@ -46,6 +50,9 @@ object Server : ServerBuilder() {
     val email = setting("email", EmailService.Settings())
     val cors = setting("cors", CorsSettings())
     val files = setting("files", PublicFileSystem.Settings())
+
+    /** Where [Backups] puts the nightly database backups. Nothing serves these; keep them private. */
+    val backups = setting("backups", PublicFileSystem.Settings("file://local/backups?serveUrl=backups"), optional = true)
 
     /**
      * Who may log in. "*" lets anyone in, which is only meant for local development: everyone who logs in gets their
@@ -87,6 +94,11 @@ object Server : ServerBuilder() {
 
     /** Serves and accepts attachments' bytes when they're stored on this server's disk (local development). */
     val fileEndpoints =   path.path("files")     module FileSystemEndpoints(files)
+
+    // Claude: AWS runs schedules in UTC whatever zone is given here.
+    val backup =          path.path("backup")    bind ScheduledTask(LocalTime(10, 0), TimeZone.UTC) {
+        try { Backups.take() } catch (e: Exception) { Backups.reportFailure(e); throw e }
+    }
 
     val multiplex =       path.path("multiplex") bind MultiplexWebSocketHandler()
     val base =            path                   bind QueryParamWebSocketHandler()
