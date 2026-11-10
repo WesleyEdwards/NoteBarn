@@ -1,5 +1,14 @@
 import type { Query, MassModification, EntryChange, ListChange, Modification, Condition, GroupCountQuery, AggregateQuery, GroupAggregateQuery, Aggregate, SortPart, DataClassPath, DataClassPathPartial, QueryPartial, DeepPartial, Fetcher, Brand } from '@lightningkite/lightning-server-simplified'
 
+export interface AdminStats {
+	users: number
+	vaults: number
+	notes: number
+	noteVersions: number
+	shares: number
+	storage: DatabaseStorage | null | undefined
+}
+
 export interface AttachmentUpload {
 	vault: Vault.ID
 	hash: string
@@ -46,6 +55,12 @@ export interface ChangesResponse {
 }
 
 export type DataSize = Brand<number, "DataSize">
+
+export interface DatabaseStorage {
+	dataSize: number
+	indexSize: number
+	storageSize: number
+}
 
 export interface DeleteNote {
 	vault: Vault.ID
@@ -413,15 +428,8 @@ export interface Api {
 		modifyWithDiff(id: User.ID, input: Modification<User>): Promise<EntryChange<User>>
 	}
 	readonly userAuth: {
-		getSelf(): Promise<User>
-		terminateCurrentSession(): Promise<void>
-		logIn(input: Array<Proof>): Promise<IdAndAuthMethods<User.ID>>
-		checkProofs(input: Array<Proof>): Promise<ProofsCheckResult<User.ID>>
-		createSubSession(input: SubSessionRequest): Promise<string>
-		authenticationRequirements(): Promise<AuthRequirements>
-		logInWithLimitations(input: LogInRequest): Promise<IdAndAuthMethods<User.ID>>
-		getTokenSimple(input: string): Promise<string>
-		terminateSession(sessionId: Uuid): Promise<void>
+		proveEmailOwnership(input: FinishProof): Promise<Proof>
+		beginEmailOwnershipProof(input: string): Promise<string>
 		list(input: Query<Session<User, User.ID>>): Promise<Array<Session<User, User.ID>>>
 		insert(input: Session<User, User.ID>): Promise<Session<User, User.ID>>
 		permissions(): Promise<ModelPermissions<Session<User, User.ID>>>
@@ -444,8 +452,15 @@ export interface Api {
 		delete(id: Uuid): Promise<void>
 		simplifiedModify(id: Uuid, input: Partial<Session<User, User.ID>>): Promise<Session<User, User.ID>>
 		modifyWithDiff(id: Uuid, input: Modification<Session<User, User.ID>>): Promise<EntryChange<Session<User, User.ID>>>
-		proveEmailOwnership(input: FinishProof): Promise<Proof>
-		beginEmailOwnershipProof(input: string): Promise<string>
+		getSelf(): Promise<User>
+		terminateCurrentSession(): Promise<void>
+		logIn(input: Array<Proof>): Promise<IdAndAuthMethods<User.ID>>
+		checkProofs(input: Array<Proof>): Promise<ProofsCheckResult<User.ID>>
+		createSubSession(input: SubSessionRequest): Promise<string>
+		authenticationRequirements(): Promise<AuthRequirements>
+		logInWithLimitations(input: LogInRequest): Promise<IdAndAuthMethods<User.ID>>
+		getTokenSimple(input: string): Promise<string>
+		terminateSession(sessionId: Uuid): Promise<void>
 	}
 	readonly vault: {
 		list(input: Query<Vault>): Promise<Array<Vault>>
@@ -536,6 +551,9 @@ export interface Api {
 		simplifiedModify(id: Share.ID, input: Partial<Share>): Promise<Share>
 		modifyWithDiff(id: Share.ID, input: Modification<Share>): Promise<EntryChange<Share>>
 	}
+	readonly admin: {
+		adminStats(): Promise<AdminStats>
+	}
 	readonly fileSystem: {
 	}
 	readonly meta: {
@@ -578,15 +596,8 @@ export class LiveApi implements Api {
 		modifyWithDiff: (id, input) => this.fetcher(`/users/${id}/delta`, "PATCH", input),
 	}
 	readonly userAuth: Api["userAuth"] = {
-		getSelf: () => this.fetcher(`/auth/session/self`, "GET", undefined),
-		terminateCurrentSession: () => this.fetcher(`/auth/session/terminate`, "POST", undefined),
-		logIn: (input) => this.fetcher(`/auth/session/login`, "POST", input),
-		checkProofs: (input) => this.fetcher(`/auth/session/proofs-check`, "POST", input),
-		createSubSession: (input) => this.fetcher(`/auth/session/sub-session`, "POST", input),
-		authenticationRequirements: () => this.fetcher(`/auth/session/auth-requirements`, "GET", undefined),
-		logInWithLimitations: (input) => this.fetcher(`/auth/session/login2`, "POST", input),
-		getTokenSimple: (input) => this.fetcher(`/auth/session/token/simple`, "POST", input),
-		terminateSession: (sessionId) => this.fetcher(`/auth/session/${sessionId}/terminate`, "POST", undefined),
+		proveEmailOwnership: (input) => this.fetcher(`/auth/proof/email/prove`, "POST", input),
+		beginEmailOwnershipProof: (input) => this.fetcher(`/auth/proof/email/start`, "POST", input),
 		list: (input) => this.fetcher(`/auth/session/sessions`, "GET", input),
 		insert: (input) => this.fetcher(`/auth/session/sessions`, "POST", input),
 		permissions: () => this.fetcher(`/auth/session/sessions/_permissions_`, "GET", undefined),
@@ -609,8 +620,15 @@ export class LiveApi implements Api {
 		delete: (id) => this.fetcher(`/auth/session/sessions/${id}`, "DELETE", undefined),
 		simplifiedModify: (id, input) => this.fetcher(`/auth/session/sessions/${id}/simplified`, "PATCH", input),
 		modifyWithDiff: (id, input) => this.fetcher(`/auth/session/sessions/${id}/delta`, "PATCH", input),
-		proveEmailOwnership: (input) => this.fetcher(`/auth/proof/email/prove`, "POST", input),
-		beginEmailOwnershipProof: (input) => this.fetcher(`/auth/proof/email/start`, "POST", input),
+		getSelf: () => this.fetcher(`/auth/session/self`, "GET", undefined),
+		terminateCurrentSession: () => this.fetcher(`/auth/session/terminate`, "POST", undefined),
+		logIn: (input) => this.fetcher(`/auth/session/login`, "POST", input),
+		checkProofs: (input) => this.fetcher(`/auth/session/proofs-check`, "POST", input),
+		createSubSession: (input) => this.fetcher(`/auth/session/sub-session`, "POST", input),
+		authenticationRequirements: () => this.fetcher(`/auth/session/auth-requirements`, "GET", undefined),
+		logInWithLimitations: (input) => this.fetcher(`/auth/session/login2`, "POST", input),
+		getTokenSimple: (input) => this.fetcher(`/auth/session/token/simple`, "POST", input),
+		terminateSession: (sessionId) => this.fetcher(`/auth/session/${sessionId}/terminate`, "POST", undefined),
 	}
 	readonly vault: Api["vault"] = {
 		list: (input) => this.fetcher(`/vault`, "GET", input),
@@ -700,6 +718,9 @@ export class LiveApi implements Api {
 		delete: (id) => this.fetcher(`/share/${id}`, "DELETE", undefined),
 		simplifiedModify: (id, input) => this.fetcher(`/share/${id}/simplified`, "PATCH", input),
 		modifyWithDiff: (id, input) => this.fetcher(`/share/${id}/delta`, "PATCH", input),
+	}
+	readonly admin: Api["admin"] = {
+		adminStats: () => this.fetcher(`/admin/stats`, "GET", undefined),
 	}
 	readonly fileSystem: Api["fileSystem"] = {
 	}

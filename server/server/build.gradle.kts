@@ -40,6 +40,8 @@ dependencies {
     implementation("commons-logging:commons-logging:1.3.5")
     // For some reason, libraries are pulling in different versions of netty
     implementation(enforcedPlatform("io.netty:netty-bom:4.1.100.Final"))
+    // For AdminEndpoints' dbStats. database-mongodb uses it without exposing it; keep the version it uses.
+    implementation("org.mongodb:mongodb-driver-kotlin-coroutine:5.7.0")
 
     api(libs.kotliner.cli)
     api(libs.comLightningKite.services.database)

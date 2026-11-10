@@ -1,6 +1,7 @@
 import {Navigate, Route, Routes, useMatch} from "react-router-dom"
 import type {Share} from "@notebarn/shared/api"
 import {useSession} from "./api/client"
+import {AdminPage} from "./components/AdminPage"
 import {LoginPage} from "./components/LoginPage"
 import {SharedPage} from "./components/SharedPage"
 import {VaultList} from "./components/VaultList"
@@ -25,6 +26,7 @@ export default function App() {
       <Route path="/vaults" element={<VaultList api={api} user={user} signOut={signOut} pick={true} />} />
       {/* One route for the vault and its notes, so opening a note doesn't remount the workspace. */}
       <Route path="/v/:vaultId/*" element={<Workspace api={api} user={user} signOut={signOut} accessToken={accessToken} />} />
+      <Route path="/admin" element={<AdminPage api={api} />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

@@ -117,7 +117,7 @@ Server (Lambda, Mongo Atlas free tier, SES email, DynamoDB cache):
    password in `server/local.properties` as `DEPLOYMENT_SETTINGS_KEY`).
 2. Run `WesleyDeployment.Deploy.main`. It deploys to `api.notebarn.a.wesleyedwards.xyz`; only the emails in
    `allowedEmails` or `admins` can sign in, and those in `admins` get the Root role (for the admin endpoints, like
-   `/meta`). Both lists are kept in `wesley-aws-settings`, not in git; change them with step 1.
+   `/meta`, and the web app's Admin page at `/admin`, which shows Atlas storage against the free tier's 512 MB). Both lists are kept in `wesley-aws-settings`, not in git; change them with step 1.
 
 **Backups and alarms.** Every night at 10:00 UTC the server saves the whole database (users, vaults, notes, note
 history, shares) as `<date>.json.gz` in a private `notebarn-backups…` S3 bucket and keeps the newest 30. Attachments
@@ -227,7 +227,6 @@ device, and retries while offline. Recently opened notes and the app itself are 
 
 Roughly in priority order.
 
-- Atlas storage: the free tier caps at 512 MB, and note history grows with editing. Show usage on the admin page.
 - Attachments: replaced or deleted files' bytes stay in the file store (nothing cleans them up yet, except deleting
   the vault). The web app shows `![[embeds]]` only in reading view, not while editing.
 - Web app: choose the sidebar's sort order, like Obsidian: by name (A–Z, Z–A) or modified time (newest, oldest), kept

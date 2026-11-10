@@ -1,5 +1,5 @@
 import {useEffect, useState} from "react"
-import {Navigate, useNavigate} from "react-router-dom"
+import {Link, Navigate, useNavigate} from "react-router-dom"
 import type {Api, User, Vault} from "@notebarn/shared/api"
 import {errorMessage} from "../api/client"
 import {storage} from "../lib/storage"
@@ -126,6 +126,14 @@ export function VaultList({api, user, signOut, pick}: {api: Api; user: User; sig
           <button className="link-button" onClick={signOut}>
             Sign out
           </button>
+          {user.role === "Root" && (
+            <>
+              {" · "}
+              <Link className="link-button" to="/admin">
+                Admin
+              </Link>
+            </>
+          )}
         </p>
       </div>
     </div>

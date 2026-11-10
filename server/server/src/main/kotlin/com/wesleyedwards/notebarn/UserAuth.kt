@@ -28,7 +28,11 @@ object UserAuth : PrincipalType<User, User.ID>, ServerBuilder() {
     override val idSerializer: KSerializer<User.ID> = User.ID.serializer()
 
     context(server: ServerRuntime)
-    override suspend fun fetch(id: User.ID): User = User.info.table().get(id) ?: throw NotFoundException()
+    override suspend fun fetch(id: User.ID): User {
+        val user = User.info.table().get(id) ?: throw NotFoundException()
+        // The admins setting outranks the stored role, so /auth/self shows the web app who's an admin.
+        return if (emailListed(Server.admins(), user.email.raw)) user.copy(role = UserRole.Root) else user
+    }
 
     context(server: ServerRuntime)
     override suspend fun fetchByProperty(property: String, value: String): User? = when (property) {
@@ -55,10 +59,7 @@ object UserAuth : PrincipalType<User, User.ID>, ServerBuilder() {
         override val expireAfter: Duration = 5.minutes
 
         context(_: ServerRuntime)
-        override suspend fun calculate(input: Authentication<User>): UserRole {
-            val user = input.fetch()
-            return if (emailListed(Server.admins(), user.email.raw)) UserRole.Root else user.role
-        }
+        override suspend fun calculate(input: Authentication<User>): UserRole = input.fetch().role
 
         context(_: ServerRuntime)
         suspend fun Authentication<User>.userRole() = get(RoleCache)

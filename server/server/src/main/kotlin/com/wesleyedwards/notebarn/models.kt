@@ -385,3 +385,23 @@ data class SharedAttachment(
     /** A download link that lasts an hour. */
     val url: String,
 )
+
+/** What the admin page shows: how many of each thing there are, and how much room the database takes. */
+@Serializable
+data class AdminStats(
+    val users: Int,
+    val vaults: Int,
+    val notes: Int,
+    val noteVersions: Int,
+    val shares: Int,
+    /** `null` when the database isn't MongoDB, like in local development. */
+    val storage: DatabaseStorage?,
+)
+
+/** Sizes in bytes, from MongoDB's dbStats. [dataSize] is uncompressed; [storageSize] is what's on disk. */
+@Serializable
+data class DatabaseStorage(
+    val dataSize: Long,
+    val indexSize: Long,
+    val storageSize: Long,
+)

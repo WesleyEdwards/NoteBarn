@@ -14,6 +14,7 @@ import com.lightningkite.services.data.TypedData
 import com.lightningkite.services.data.toEmailAddress
 import com.lightningkite.services.database.*
 import com.lightningkite.services.files.PublicFileSystem
+import com.wesleyedwards.notebarn.data.AdminEndpoints
 import com.wesleyedwards.notebarn.data.NoteEndpoints
 import com.wesleyedwards.notebarn.data.UserEndpoints.info
 import com.wesleyedwards.notebarn.data.VaultEndpoints
@@ -247,6 +248,19 @@ class NoteEndpointsTest {
         assertFailsWith<BadRequestException> { NoteEndpoints.attachmentUpload.test(auth, AttachmentUpload(vault._id, "../../etc", 1)) }
         val (other, _) = setUp("other@test.com")
         assertFailsWith<NotFoundException> { NoteEndpoints.attachmentUrls.test(other, AttachmentUrls(vault._id, listOf(missing))) }
+    }
+
+    @Test
+    fun `admin stats count everything`() = testServer {
+        val (auth, vault) = setUp()
+        NoteEndpoints.write.test(auth, WriteNote(vault._id, "A.md", "hello"))
+        val (boss, _) = setUp("boss@test.com")
+        // Claude: .test() skips the auth requirement, so only the counts are checked here.
+        val stats = AdminEndpoints.stats.test(boss, Unit)
+        assertEquals(2, stats.users)
+        assertEquals(2, stats.vaults)
+        assertEquals(1, stats.notes)
+        assertNull(stats.storage)
     }
 }
 
