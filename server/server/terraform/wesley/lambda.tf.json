@@ -177,15 +177,7 @@
     },
     "locals": {
         "settings_raw": {
-            "general": {
-                "projectName": "Notebarn",
-                "publicUrl": "https://api.notebarn.a.wesleyedwards.xyz",
-                "wsUrl": "wss://ws.api.notebarn.a.wesleyedwards.xyz?path=",
-                "debug": false,
-                "emergencyContact": "wesleyutahedwards@gmail.com"
-            },
             "cache": "dynamodb://us-west-2/notebarn",
-            "database": "mongodb+srv://notebarndatabase-main:${random_password.database.result}@${replace(mongodbatlas_advanced_cluster.database.connection_strings.standard_srv, \"mongodb+srv://\", \"\")}/default?retryWrites=true&w=majority&atlasSearch=true",
             "cors": {
                 "limitToDomains": [
                     "*"
@@ -201,8 +193,16 @@
                 "cacheLength": null,
                 "forbidOnMatchFail": true
             },
-            "allowedEmails": "${var.allowedEmails}",
             "secretBasis": "${random_password.secretBasis.result}",
+            "general": {
+                "projectName": "Notebarn",
+                "publicUrl": "https://api.notebarn.a.wesleyedwards.xyz",
+                "wsUrl": "wss://ws.api.notebarn.a.wesleyedwards.xyz?path=",
+                "debug": false,
+                "emergencyContact": "wesleyutahedwards@gmail.com"
+            },
+            "database": "mongodb+srv://notebarndatabase-main:${random_password.database.result}@${replace(mongodbatlas_advanced_cluster.database.connection_strings.standard_srv, \"mongodb+srv://\", \"\")}/default?retryWrites=true&w=majority&atlasSearch=true",
+            "allowedEmails": "${var.allowedEmails}",
             "files": "s3://${aws_s3_bucket.files.bucket}.s3-${aws_s3_bucket.files.region}.amazonaws.com/?signedUrlDuration=12h",
             "logging": {
                 "default": {
@@ -288,7 +288,8 @@
                 "maxLogsPerSecond": null
             },
             "email": "smtp://${aws_iam_access_key.email.id}:${aws_iam_access_key.email.ses_smtp_password_v4}@email-smtp.us-west-2.amazonaws.com:587?fromEmail=noreply@api.notebarn.a.wesleyedwards.xyz",
-            "admins": "${var.admins}"
+            "admins": "${var.admins}",
+            "backups": "s3://${aws_s3_bucket.backups.bucket}.s3-${aws_s3_bucket.backups.region}.amazonaws.com/?signedUrlDuration=1h"
         },
         "is_windows": "${substr(pathexpand(\"~\"), 0, 1) == \"/\" ? false : true}",
         "servicesAccessPolicy": {
@@ -313,6 +314,27 @@
                     "Effect": "Allow",
                     "Resource": [
                         "${aws_s3_bucket.files.arn}/*"
+                    ]
+                },
+                {
+                    "Action": [
+                        "s3:ListBucket",
+                        "s3:GetBucketLocation"
+                    ],
+                    "Effect": "Allow",
+                    "Resource": [
+                        "${aws_s3_bucket.backups.arn}"
+                    ]
+                },
+                {
+                    "Action": [
+                        "s3:GetObject",
+                        "s3:PutObject",
+                        "s3:DeleteObject"
+                    ],
+                    "Effect": "Allow",
+                    "Resource": [
+                        "${aws_s3_bucket.backups.arn}/*"
                     ]
                 },
                 {

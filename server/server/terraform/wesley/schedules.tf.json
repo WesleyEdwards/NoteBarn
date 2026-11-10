@@ -1,1 +1,18 @@
-{}
+{
+    "resource": {
+        "aws_cloudwatch_event_rule": {
+            "scheduled_task_backup": {
+                "name": "notebarn_backup",
+                "schedule_expression": "cron(0 10 * * ? *)"
+            }
+        },
+        "aws_cloudwatch_event_target": {
+            "scheduled_task_backup": {
+                "input": "{\"scheduled\": \"/backup\"}",
+                "rule": "${aws_cloudwatch_event_rule.scheduled_task_backup.name}",
+                "target_id": "lambda",
+                "arn": "${aws_lambda_alias.main.arn}"
+            }
+        }
+    }
+}

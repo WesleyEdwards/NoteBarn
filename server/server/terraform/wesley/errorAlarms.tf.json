@@ -1,0 +1,42 @@
+{
+    "resource": {
+        "aws_cloudwatch_metric_alarm": {
+            "lambda_errors": {
+                "alarm_name": "notebarn_lambda_errors",
+                "statistic": "Sum",
+                "period": 3600,
+                "metric_name": "Errors",
+                "evaluation_periods": 1,
+                "alarm_description": "Notebarn's Lambda crashed or timed out",
+                "treat_missing_data": "notBreaching",
+                "namespace": "AWS/Lambda",
+                "comparison_operator": "GreaterThanOrEqualToThreshold",
+                "alarm_actions": [
+                    "${aws_sns_topic.emergency.arn}"
+                ],
+                "threshold": 1,
+                "dimensions": {
+                    "FunctionName": "${aws_lambda_function.main.function_name}"
+                }
+            },
+            "http_5xx": {
+                "alarm_name": "notebarn_http_5xx",
+                "statistic": "Sum",
+                "period": 3600,
+                "metric_name": "5xx",
+                "evaluation_periods": 1,
+                "alarm_description": "Notebarn's API answered with server errors",
+                "treat_missing_data": "notBreaching",
+                "namespace": "AWS/ApiGateway",
+                "comparison_operator": "GreaterThanOrEqualToThreshold",
+                "alarm_actions": [
+                    "${aws_sns_topic.emergency.arn}"
+                ],
+                "threshold": 3,
+                "dimensions": {
+                    "ApiId": "${aws_apigatewayv2_api.http.id}"
+                }
+            }
+        }
+    }
+}
