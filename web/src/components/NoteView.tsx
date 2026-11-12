@@ -1,11 +1,22 @@
 import {useEffect, useRef, useState, type MutableRefObject} from "react"
 import type {Api, Note, Vault} from "@notebarn/shared/api"
 import {errorMessage} from "../api/client"
-import {INVALID_NAME_CHARS, availablePath, basename, dirname, linkTextFor, noteTitle, pastedImageName} from "@notebarn/shared/paths"
+import {
+  INVALID_NAME_CHARS,
+  availablePath,
+  basename,
+  dirname,
+  linkTextFor,
+  noteTitle,
+  parseWikilink,
+  pastedImageName,
+  resolveWikilink
+} from "@notebarn/shared/paths"
 import {uploadAttachment} from "../sync/attachments"
 import {NoteSession, localDraftStore, type SaveState} from "../sync/NoteSession"
 import type {VaultStore} from "../sync/VaultStore"
 import {noteCache} from "../sync/noteCache"
+import {AttachmentEmbed} from "./Attachment"
 import {Backlinks} from "./Backlinks"
 import {Editor, type EditorHandle} from "./Editor"
 import {EditorToolbar} from "./EditorToolbar"
@@ -188,6 +199,10 @@ export function NoteView(props: NoteViewProps) {
           onFiles={(files) => void addFiles(files)}
           autoFocus={!props.focusTitle && !load.existed}
           onFocusChange={setEditorFocused}
+          renderEmbed={(inner) => {
+            const link = parseWikilink(inner)
+            return <AttachmentEmbed path={resolveWikilink(link.target, path, paths)} name={link.target} size={link.alias} />
+          }}
         />
       ) : (
         <Reader text={text} path={path} paths={paths} onOpenLink={props.onOpenLink} onChangeText={edit} />

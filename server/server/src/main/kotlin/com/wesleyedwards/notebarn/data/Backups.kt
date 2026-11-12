@@ -1,5 +1,6 @@
 package com.wesleyedwards.notebarn.data
 
+import com.lightningkite.lightningserver.definition.ScheduledTask
 import com.lightningkite.lightningserver.runtime.ServerRuntime
 import com.lightningkite.services.data.MediaType
 import com.lightningkite.services.data.TypedData
@@ -14,6 +15,7 @@ import com.wesleyedwards.notebarn.data.VaultEndpoints.info
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
@@ -90,8 +92,8 @@ object Backups {
     }
 
     /**
-     * Emails the admins that the backup failed. The Lambda adapter turns a scheduled task's exception into a quiet 500,
-     * so without this nobody would hear about it.
+     * Emails the admins that the nightly backup (or the attachment cleanup after it) failed. The Lambda adapter turns a
+     * scheduled task's exception into a quiet 500, so without this nobody would hear about it.
      */
     context(_: ServerRuntime)
     suspend fun reportFailure(e: Exception) {
@@ -100,11 +102,22 @@ object Backups {
         val trace = e.stackTraceToString()
         Server.email().send(
             Email(
-                subject = "Notebarn's backup failed",
+                subject = "Notebarn's nightly backup failed",
                 to = to,
-                html = "<p>Tonight's backup failed:</p><pre>${trace.replace("&", "&amp;").replace("<", "&lt;")}</pre>",
-                plainText = "Tonight's backup failed:\n\n$trace",
+                html = "<p>Tonight's backup or attachment cleanup failed:</p><pre>${trace.replace("&", "&amp;").replace("<", "&lt;")}</pre>",
+                plainText = "Tonight's backup or attachment cleanup failed:\n\n$trace",
             )
         )
+    }
+}
+
+// Claude: AWS runs schedules in UTC whatever zone is given here.
+val BackupTask = ScheduledTask(LocalTime(10, 0), TimeZone.UTC) {
+    try {
+        Backups.take()
+        NoteEndpoints.deleteUnusedAttachments()
+    } catch (e: Exception) {
+        Backups.reportFailure(e)
+        throw e
     }
 }

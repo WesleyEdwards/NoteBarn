@@ -121,7 +121,9 @@ Server (Lambda, Mongo Atlas free tier, SES email, DynamoDB cache):
 
 **Backups and alarms.** Every night at 10:00 UTC the server saves the whole database (users, vaults, notes, note
 history, shares) as `<date>.json.gz` in a private `notebarn-backups…` S3 bucket and keeps the newest 30. Attachments
-aren't in it; they're already in their own bucket. If a backup fails, the `admins` get an email. Separately, AWS emails
+aren't in it; they're already in their own bucket. Right after the backup, it deletes attachment bytes that no note
+or note history uses anymore (bytes uploaded in the last day are kept, in case their write hasn't arrived yet). If
+either fails, the `admins` get an email. Separately, AWS emails
 the deployment's contact if the Lambda crashes or times out, or the API returns 3 or more server errors in an hour (as
 well as the generated spend alarms). Confirm the SNS subscription email the first time.
 
@@ -155,6 +157,8 @@ next number, so "everything after version N" is how a client catches up.
 **Attachments** (any file that isn't `.md` or `.canvas`) are notes too, with `attachment: true`, empty `content`, and
 `hash`/`size` of their bytes. The bytes don't go through the server: they're stored in the file store (S3 in
 production, `server/local/files` locally) at `attachments/<vault>/<sha256>`, so each file is kept once per vault.
+Bytes are deleted the night after nothing uses them (see Backups); a deleted or replaced file's history copy keeps
+its bytes until that copy expires.
 
 - `POST /note/attachment-upload {vault, hash, size}` → `{uploadUrl}`: a link to PUT the bytes to, or null if the
   server already has them.
@@ -213,8 +217,8 @@ In the web app:
 - "Share…" in a note's menu makes a link anyone can read it through (copied straight away), at `/s/<id>`. Shared notes
   have a 🔗 in the sidebar; "Stop sharing" in the same dialog turns the link off.
 
-Paste or drop a file into a note to upload it next to the note and link it (`![[name]]`); reading
-view shows images, PDFs, audio and video, and opening an attachment from the file list shows it with a download
+Paste or drop a file into a note to upload it next to the note and link it (`![[name]]`); both
+editing and reading view show images, PDFs, audio and video, and opening an attachment from the file list shows it with a download
 button. The download button at the top of the sidebar saves the whole vault (notes and attachments, in their
 folders) as a zip, straight from the server.
 
@@ -227,8 +231,6 @@ device, and retries while offline. Recently opened notes and the app itself are 
 
 Roughly in priority order.
 
-- Attachments: replaced or deleted files' bytes stay in the file store (nothing cleans them up yet, except deleting
-  the vault). The web app shows `![[embeds]]` only in reading view, not while editing.
 - Web app: choose the sidebar's sort order, like Obsidian: by name (A–Z, Z–A) or modified time (newest, oldest), kept
   per vault on each device. Created time would need a new server field.
 - Shares: check the share ids can't be guessed; maybe an optional expiry.

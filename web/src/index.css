@@ -863,20 +863,24 @@ kbd {
   text-decoration: none;
 }
 
-.markdown .embed-missing {
+.cm-embed {
+  padding: 2px 0;
+}
+
+.embed-missing {
   color: var(--text-faint);
   font-size: 0.95em;
 }
 
-.markdown .embed-loading {
+.embed-loading {
   display: inline-block;
   color: var(--text-faint);
   font-size: 0.95em;
   min-height: 1.5em;
 }
 
-.markdown .embed-image,
-.markdown .embed-video {
+.embed-image,
+.embed-video {
   display: block;
   max-width: 100%;
   height: auto;
@@ -884,7 +888,7 @@ kbd {
   border-radius: 6px;
 }
 
-.markdown .embed-pdf {
+.embed-pdf {
   display: block;
   width: 100%;
   height: 70vh;
@@ -893,7 +897,7 @@ kbd {
   border-radius: 6px;
 }
 
-.markdown .embed-audio {
+.embed-audio {
   display: block;
   width: 100%;
   margin: 8px 0;

@@ -23,6 +23,7 @@ import com.lightningkite.services.files.FileObject
 import kotlinx.coroutines.flow.toList
 import java.security.MessageDigest
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.uuid.Uuid
 
@@ -146,6 +147,27 @@ object NoteEndpoints : ServerBuilder() {
     fun blob(vault: Vault.ID, hash: String): FileObject {
         if (!SHA256_HEX.matches(hash)) throw BadRequestException("An attachment's hash must be a SHA-256 in lowercase hex.")
         return Server.files().root.then("attachments/$vault/$hash")
+    }
+
+    /**
+     * Deletes stored attachment bytes that no note or earlier copy uses anymore.
+     *
+     * Bytes uploaded in the last day are kept even when unused, since their Write Attachment may not have arrived yet.
+     */
+    context(_: ServerRuntime)
+    suspend fun deleteUnusedAttachments() {
+        val uploadedBefore = Clock.System.now() - 1.days
+        for (vault in Vault.info.table().find(Condition.Always).toList()) {
+            val used = HashSet<String>()
+            info.table().find(condition { (it.vault eq vault._id) and (it.attachment eq true) }).toList().mapTo(used) { it.hash }
+            historyInfo.table().find(condition { (it.vault eq vault._id) and (it.attachment eq true) }).toList().mapTo(used) { it.hash }
+            val unused = Server.files().root.then("attachments/${vault._id}").list().orEmpty().filter { it.name !in used }
+            for (file in unused) {
+                // The local file system doesn't know when a file was written, so locally anything unused goes.
+                val modified = file.head()?.lastModified
+                if (modified == null || modified < uploadedBefore) file.delete()
+            }
+        }
     }
 
     /** The SHA-256 (hex) and length of a stored file's bytes, read in pieces so a big file doesn't fill memory. */

@@ -251,6 +251,24 @@ class NoteEndpointsTest {
     }
 
     @Test
+    fun `cleanup deletes only bytes nothing uses`() = testServer {
+        val (auth, vault) = setUp()
+        val live = upload(auth, vault, byteArrayOf(1))
+        NoteEndpoints.writeAttachment.test(auth, WriteAttachment(vault._id, "live.png", live))
+        val deleted = upload(auth, vault, byteArrayOf(2))
+        NoteEndpoints.writeAttachment.test(auth, WriteAttachment(vault._id, "deleted.png", deleted))
+        NoteEndpoints.delete.test(auth, DeleteNote(vault._id, "deleted.png"))
+        val stray = upload(auth, vault, byteArrayOf(3))
+
+        NoteEndpoints.deleteUnusedAttachments()
+
+        assertNotNull(NoteEndpoints.blob(vault._id, live).head())
+        // Still in the history, so it can be restored.
+        assertNotNull(NoteEndpoints.blob(vault._id, deleted).head())
+        assertNull(NoteEndpoints.blob(vault._id, stray).head())
+    }
+
+    @Test
     fun `admin stats count everything`() = testServer {
         val (auth, vault) = setUp()
         NoteEndpoints.write.test(auth, WriteNote(vault._id, "A.md", "hello"))

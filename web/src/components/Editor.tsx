@@ -1,6 +1,7 @@
-import {forwardRef, useEffect, useImperativeHandle, useRef} from "react"
-import {Annotation, EditorState} from "@codemirror/state"
-import {EditorView, drawSelection, keymap, placeholder} from "@codemirror/view"
+import {forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode} from "react"
+import {createPortal} from "react-dom"
+import {Annotation, EditorState, StateField, type Text} from "@codemirror/state"
+import {Decoration, EditorView, WidgetType, drawSelection, keymap, placeholder, type DecorationSet} from "@codemirror/view"
 import {defaultKeymap, history, historyKeymap, indentLess, indentMore, indentWithTab, redo, undo} from "@codemirror/commands"
 import {highlightSelectionMatches, search, searchKeymap} from "@codemirror/search"
 import {markdown, markdownLanguage} from "@codemirror/lang-markdown"
@@ -15,7 +16,7 @@ import {
   type CompletionResult
 } from "@codemirror/autocomplete"
 import {tags as t} from "@lezer/highlight"
-import {dirname, linkTextFor, noteTitle} from "@notebarn/shared/paths"
+import {dirname, isNoteLink, linkTextFor, noteTitle, parseWikilink} from "@notebarn/shared/paths"
 import {frontmatter} from "../markdown/frontmatter"
 import {cycleHeading, insertWikilink, toggleTask, toggleWrap} from "../markdown/commands"
 
@@ -46,6 +47,8 @@ interface EditorProps {
   autoFocus?: boolean
   /** The editor gained or lost the keyboard (the toolbar only shows while it has it). */
   onFocusChange?(focused: boolean): void
+  /** What to show under a line with `![[file.png]]`, given the inside of the brackets. Attachments only, not notes. */
+  renderEmbed?(link: string): ReactNode
 }
 
 const highlight = HighlightStyle.define([
@@ -96,6 +99,47 @@ function wikilinkCompletion(paths: () => readonly string[]) {
   }
 }
 
+/** Where an attachment embed is shown: an empty box that the editor component fills in with a portal. */
+class EmbedWidget extends WidgetType {
+  constructor(
+    readonly link: string,
+    private readonly hosts: EmbedHosts
+  ) {
+    super()
+  }
+  eq(other: EmbedWidget) {
+    return other.link === this.link
+  }
+  toDOM() {
+    const dom = document.createElement("div")
+    dom.className = "cm-embed"
+    this.hosts.add(dom, this.link)
+    return dom
+  }
+  destroy(dom: HTMLElement) {
+    this.hosts.remove(dom)
+  }
+}
+
+interface EmbedHosts {
+  add(dom: HTMLElement, link: string): void
+  remove(dom: HTMLElement): void
+}
+
+/** A block under each line, after the line's `![[attachment]]` embeds. */
+function embedDecorations(doc: Text, hosts: EmbedHosts): DecorationSet {
+  const widgets = []
+  let lineEnd = -1
+  for (const text of doc.iterLines()) {
+    lineEnd += text.length + 1
+    for (const m of text.matchAll(/!\[\[([^\]\n]+?)\]\]/g)) {
+      if (isNoteLink(parseWikilink(m[1]).target)) continue
+      widgets.push(Decoration.widget({widget: new EmbedWidget(m[1], hosts), block: true, side: 1}).range(lineEnd))
+    }
+  }
+  return Decoration.set(widgets)
+}
+
 /** The `[[target]]` around a position in the text, if there is one. */
 function wikilinkAt(view: EditorView, pos: number): string | null {
   const line = view.state.doc.lineAt(pos)
@@ -112,8 +156,28 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(prop
   const view = useRef<EditorView | null>(null)
   const latest = useRef(props)
   latest.current = props
+  // Claude: CodeMirror owns the embeds' boxes; React fills them through portals, so they get the app's context.
+  const [embeds, setEmbeds] = useState<ReadonlyMap<HTMLElement, {link: string; key: number}>>(new Map())
 
   useEffect(() => {
+    let made = 0
+    const hosts: EmbedHosts = {
+      add: (dom, link) => {
+        const key = made++
+        setEmbeds((m) => new Map(m).set(dom, {link, key}))
+      },
+      remove: (dom) =>
+        setEmbeds((m) => {
+          const next = new Map(m)
+          next.delete(dom)
+          return next
+        })
+    }
+    const embedField = StateField.define<DecorationSet>({
+      create: (state) => embedDecorations(state.doc, hosts),
+      update: (set, tr) => (tr.docChanged ? embedDecorations(tr.state.doc, hosts) : set),
+      provide: (field) => EditorView.decorations.from(field)
+    })
     const state = EditorState.create({
       doc: props.initialText,
       extensions: [
@@ -140,6 +204,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(prop
         EditorView.lineWrapping,
         EditorView.contentAttributes.of({spellcheck: "true", autocorrect: "on", autocapitalize: "sentences"}),
         placeholder("Start writing…"),
+        ...(props.renderEmbed ? [embedField] : []),
         autocompletion({override: [wikilinkCompletion(() => latest.current.paths())], icons: false}),
         EditorView.updateListener.of((update) => {
           if (!update.docChanged) return
@@ -250,5 +315,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(prop
     }
   }))
 
-  return <div className="editor" ref={host} />
+  return (
+    <>
+      <div className="editor" ref={host} />
+      {[...embeds].map(([dom, {link, key}]) => createPortal(props.renderEmbed?.(link), dom, key))}
+    </>
+  )
 })

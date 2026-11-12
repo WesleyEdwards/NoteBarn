@@ -3,7 +3,7 @@ import Markdown, {defaultUrlTransform, type Components} from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import {EMBED_PREFIX, WIKILINK_PREFIX, remarkWikilinks, splitFrontmatter, toggleTask} from "../markdown/wikilinks"
-import {isTextFile, parseWikilink, resolveWikilink} from "@notebarn/shared/paths"
+import {isNoteLink, parseWikilink, resolveWikilink} from "@notebarn/shared/paths"
 import {AttachmentEmbed} from "./Attachment"
 
 interface ReaderProps {
@@ -49,7 +49,7 @@ export const Reader = memo(function Reader({text, path, paths, onOpenLink, onCha
         const target = decodeURIComponent(href.slice(EMBED_PREFIX.length))
         const link = parseWikilink(target)
         const name = link.target
-        const note = !/\.[a-z0-9]+$/i.test(name) || isTextFile(name)
+        const note = isNoteLink(name)
         if (note && !onOpenLink) return <span className="embed-link plain">↪ {children}</span>
         return note ? (
           <a

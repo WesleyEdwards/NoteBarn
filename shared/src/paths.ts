@@ -14,6 +14,9 @@ export const isMarkdown = (path: string) => /\.md$/i.test(path)
 /** Files synced as text, which can be merged. Everything else is an attachment, synced as bytes. */
 export const isTextFile = (path: string) => /\.(md|canvas)$/i.test(path)
 
+/** Whether a link's `target` names a note (no extension, or a text file's) rather than an attachment. */
+export const isNoteLink = (target: string) => !/\.[a-z0-9]+$/i.test(target) || isTextFile(target)
+
 const MIME_TYPES: Record<string, string> = {
   png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp", svg: "image/svg+xml",
   bmp: "image/bmp", avif: "image/avif", pdf: "application/pdf", mp3: "audio/mpeg", wav: "audio/wav", m4a: "audio/mp4",

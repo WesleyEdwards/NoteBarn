@@ -29,16 +29,8 @@ import com.lightningkite.services.email.EmailService
 import com.lightningkite.services.email.javasmtp.JavaSmtpEmailService
 import com.lightningkite.services.files.PublicFileSystem
 import com.lightningkite.services.files.s3.S3PublicFileSystem
-import com.lightningkite.lightningserver.definition.ScheduledTask
 import com.wesleyedwards.notebarn.UserAuth.RoleCache.userRole
-import com.wesleyedwards.notebarn.data.AdminEndpoints
-import com.wesleyedwards.notebarn.data.Backups
-import kotlinx.datetime.LocalTime
-import kotlinx.datetime.TimeZone
-import com.wesleyedwards.notebarn.data.NoteEndpoints
-import com.wesleyedwards.notebarn.data.ShareEndpoints
-import com.wesleyedwards.notebarn.data.UserEndpoints
-import com.wesleyedwards.notebarn.data.VaultEndpoints
+import com.wesleyedwards.notebarn.data.*
 
 object Server : ServerBuilder() {
     override val annotationValidators: Runtime<AnnotationValidators> = Runtime {
@@ -97,13 +89,10 @@ object Server : ServerBuilder() {
     /** Serves and accepts attachments' bytes when they're stored on this server's disk (local development). */
     val fileEndpoints =   path.path("files")     module FileSystemEndpoints(files)
 
-    // Claude: AWS runs schedules in UTC whatever zone is given here.
-    val backup =          path.path("backup")    bind ScheduledTask(LocalTime(10, 0), TimeZone.UTC) {
-        try { Backups.take() } catch (e: Exception) { Backups.reportFailure(e); throw e }
-    }
+    val backup =          path.path("backup")    bind   BackupTask
 
-    val multiplex =       path.path("multiplex") bind MultiplexWebSocketHandler()
-    val base =            path                   bind QueryParamWebSocketHandler()
+    val multiplex =       path.path("multiplex") bind   MultiplexWebSocketHandler()
+    val base =            path                              bind   QueryParamWebSocketHandler()
     val meta =            path.path("meta")      module MetaEndpoints("com.wesleyedwards.notebarn", database, cache)
     // @Formatter:on
 }
