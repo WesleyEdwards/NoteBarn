@@ -42,4 +42,6 @@ module "web" {
   domain_name = "notebarn.a.wesleyedwards.xyz"
   domain_name_zone = "a.wesleyedwards.xyz"
   react_mode = true
+  lambda_src_dir = "og-tags"
+  lambda_dist_dir = "og-tags.zip"
 }
