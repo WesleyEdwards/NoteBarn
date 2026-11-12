@@ -39,6 +39,8 @@ interface NoteViewProps {
   onOpen(path: string): void
   onSaveState(state: SaveState): void
   onRename(newTitle: string): Promise<boolean>
+  /** Another device renamed or moved this note to `path`. */
+  onMoved(path: string): void
   sessionRef: MutableRefObject<NoteSession | null>
 }
 
@@ -94,7 +96,9 @@ export function NoteView(props: NoteViewProps) {
       )
       session = s
       sessionRef.current = s
-      unwatch = store.watchNote(path, (n) => {
+      unwatch = store.watchNote(path, (n, movedTo) => {
+        // Claude: with unsaved edits, stay put (typing brings the old note back) so they aren't lost.
+        if (movedTo && s.saveState === "saved") return latest.current.onMoved(movedTo)
         noteCache.put(n)
         s.remoteUpdate(n)
       })

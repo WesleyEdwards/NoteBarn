@@ -98,7 +98,7 @@ export function Workspace({
       .catch(async (e) => {
         if (e instanceof Response && (e.status === 404 || e.status === 403)) {
           storage.remove("last-vault")
-          toast(await errorMessage(e), "error")
+          toast("That vault doesn't exist, or isn't yours.", "error")
           navigate("/", {replace: true})
         }
       })
@@ -663,6 +663,7 @@ export function Workspace({
                 onOpen={open}
                 onSaveState={setSaveState}
                 onRename={rename}
+                onMoved={(to) => navigate(notePath(vaultId, to), {replace: true})}
                 sessionRef={sessionRef}
               />
             ) : (

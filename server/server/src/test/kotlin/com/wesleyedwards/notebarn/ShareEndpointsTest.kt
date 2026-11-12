@@ -53,12 +53,12 @@ class ShareEndpointsTest {
         val share = ShareEndpoints.create.test(auth, ShareNote(vault._id, "Folder/Recipe.md"))
         assertEquals(share._id, ShareEndpoints.create.test(auth, ShareNote(vault._id, "Folder/Recipe.md"))._id)
 
-        val seen = ShareEndpoints.view.test(null, share._id)
+        val seen = ShareEndpoints.view.test(null, share._id.toString())
         assertEquals("Recipe", seen.title)
         assertEquals("one", seen.content)
 
         NoteEndpoints.write.test(auth, WriteNote(vault._id, "Folder/Recipe.md", "two", baseVersion = v1))
-        assertEquals("two", ShareEndpoints.view.test(null, share._id).content)
+        assertEquals("two", ShareEndpoints.view.test(null, share._id.toString()).content)
     }
 
     @Test
@@ -71,7 +71,7 @@ class ShareEndpointsTest {
         NoteEndpoints.write.test(auth, WriteNote(vault._id, "Folder/Recipe.md", text))
         val share = ShareEndpoints.create.test(auth, ShareNote(vault._id, "Folder/Recipe.md"))
 
-        val files = ShareEndpoints.view.test(null, share._id).attachments.associate { it.target to it.hash }
+        val files = ShareEndpoints.view.test(null, share._id.toString()).attachments.associate { it.target to it.hash }
         assertEquals(mapOf("photo one.png" to photo, "pie.png" to other), files)
     }
 
@@ -81,14 +81,15 @@ class ShareEndpointsTest {
         NoteEndpoints.write.test(auth, WriteNote(vault._id, "A.md", "a"))
         val first = ShareEndpoints.create.test(auth, ShareNote(vault._id, "A.md"))
         ShareEndpoints.stop.test(auth, ShareNote(vault._id, "A.md"))
-        assertFailsWith<NotFoundException> { ShareEndpoints.view.test(null, first._id) }
+        assertFailsWith<NotFoundException> { ShareEndpoints.view.test(null, first._id.toString()) }
+        assertFailsWith<NotFoundException> { ShareEndpoints.view.test(null, "nope") }
 
         val second = ShareEndpoints.create.test(auth, ShareNote(vault._id, "A.md"))
         assertNotEquals(first._id, second._id)
         NoteEndpoints.delete.test(auth, DeleteNote(vault._id, "A.md"))
         // A new note at the same path isn't shared.
         NoteEndpoints.write.test(auth, WriteNote(vault._id, "A.md", "new"))
-        assertFailsWith<NotFoundException> { ShareEndpoints.view.test(null, second._id) }
+        assertFailsWith<NotFoundException> { ShareEndpoints.view.test(null, second._id.toString()) }
     }
 
     @Test
@@ -97,7 +98,7 @@ class ShareEndpointsTest {
         NoteEndpoints.write.test(auth, WriteNote(vault._id, "A.md", "a"))
         val share = ShareEndpoints.create.test(auth, ShareNote(vault._id, "A.md"))
         NoteEndpoints.rename.test(auth, RenameNote(vault._id, "A.md", "Folder/B.md"))
-        assertEquals("B", ShareEndpoints.view.test(null, share._id).title)
+        assertEquals("B", ShareEndpoints.view.test(null, share._id.toString()).title)
         assertEquals("Folder/B.md", ShareEndpoints.rest.query.test(auth, Query(Condition.Always)).single().path)
     }
 

@@ -17,7 +17,9 @@ export function AdminPage({api}: {api: Api}) {
     api.admin
       .adminStats()
       .then(setStats)
-      .catch(async (e) => setError(await errorMessage(e)))
+      .catch(async (e) =>
+        setError(e instanceof Response && e.status === 403 ? "Only admins can see this page." : await errorMessage(e))
+      )
   }, [api])
 
   const storage = stats?.storage

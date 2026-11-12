@@ -17,6 +17,7 @@ import com.wesleyedwards.notebarn.*
 import com.wesleyedwards.notebarn.data.NoteEndpoints.info
 import com.wesleyedwards.notebarn.data.VaultEndpoints.info
 import kotlinx.coroutines.flow.toList
+import kotlin.uuid.Uuid
 import java.net.URLDecoder
 
 /**
@@ -83,8 +84,10 @@ object ShareEndpoints : ServerBuilder() {
         summary = "View Shared Note",
         description = "The note a share link points to, as it is now, with links to the files it shows. Doesn't need a login.",
         auth = noAuth,
-        implementation = { id: Share.ID ->
+        // Claude: a String, not a Share.ID, so a mangled link is a 404 rather than a failed parse (a 500).
+        implementation = { raw: String ->
             val gone = NotFoundException("This link doesn't work anymore. Its owner may have stopped sharing it.")
+            val id = Uuid.parseOrNull(raw)?.let { Share.ID(it) } ?: throw gone
             val share = info.table().get(id) ?: throw gone
             val note = Note.info.table().findOne(condition { (it.vault eq share.vault) and (it.path eq share.path) })
             if (note == null || note.deleted || note.attachment) throw gone

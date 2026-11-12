@@ -27,7 +27,7 @@ export class VaultStore {
   private notes = new Map<string, NoteSummary>()
   private cursor = 0
   private listeners = new Set<() => void>()
-  private noteListeners = new Map<string, Set<(note: Note) => void>>()
+  private noteListeners = new Map<string, Set<(note: Note, movedTo?: string) => void>>()
   private timer: ReturnType<typeof setInterval> | null = null
   private polling: Promise<void> | null = null
   private pollAgain = false
@@ -76,8 +76,11 @@ export class VaultStore {
 
   getSnapshot = () => this.snapshot
 
-  /** Hear about newer copies of one note, as changes come in. */
-  watchNote(path: string, listener: (note: Note) => void) {
+  /**
+   * Hear about newer copies of one note, as changes come in. When another device renamed it, the note is its
+   * tombstone and `movedTo` is where it went.
+   */
+  watchNote(path: string, listener: (note: Note, movedTo?: string) => void) {
     let set = this.noteListeners.get(path)
     if (!set) this.noteListeners.set(path, (set = new Set()))
     set.add(listener)
@@ -193,8 +196,14 @@ export class VaultStore {
       while (more) {
         const page = await this.api.note.noteChanges({vault: this.vault, since: this.cursor, limit: 200})
         for (const note of page.notes) {
+          const before = this.notes.get(note.path)
           this.notes.set(note.path, summaryOf(note))
-          this.noteListeners.get(note.path)?.forEach((l) => l(note))
+          // Claude: the server saves a renamed note at its new path, then tombstones the old one with the next version.
+          const movedTo =
+            note.deleted && before && !before.deleted
+              ? page.notes.find((n) => !n.deleted && n.version === note.version - 1 && n.hash === before.hash)?.path
+              : undefined
+          this.noteListeners.get(note.path)?.forEach((l) => l(note, movedTo))
           changed = true
         }
         this.cursor = page.cursor
