@@ -27,7 +27,7 @@
         "required_version": "~> 1.0",
         "backend": {
             "s3": {
-                "bucket": "wesleyedwards-terraform",
+                "bucket": "wesleyed-terraform",
                 "encrypt": true,
                 "region": "us-west-2",
                 "key": "notebarn/server/prod"

@@ -48,7 +48,7 @@ object WesleyDeployment : TerraformAwsServerlessDomainBuilder<Server>(Server) {
     override val displayName = "Notebarn"
     override val terraformRoot: File = File("server/terraform/wesley")
 
-    override val storageBucket = "wesleyedwards-terraform"
+    override val storageBucket = "wesleyed-terraform"
     override val storageBucketPath: String = "notebarn/server/prod"
 
     override val domain = "api.notebarn.wesleyed.com"
@@ -180,6 +180,20 @@ object WesleyDeployment : TerraformAwsServerlessDomainBuilder<Server>(Server) {
     object EditSettings {
         @JvmStatic
         fun main(vararg args: String) = editVars()
+    }
+    object Shell {
+        @JvmStatic
+        fun main(vararg args: String) {
+            write()
+            println("\nEntering Terraform Shell")
+            while (true) {
+                val next = readlnOrNull()?.also { if (it.isBlank()) continue } ?: break
+                try {
+                    terraform(*next.trim().split(Regex("\\s+")).toTypedArray())
+                } catch (_: Throwable) {
+                }
+            }
+        }
     }
 
     object Deploy {
