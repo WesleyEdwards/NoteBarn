@@ -37,7 +37,7 @@ import kotlin.time.Duration.Companion.minutes
 
 
 /**
- * Wesley's own deployment of Notebarn, at api.notebarn.a.wesleyedwards.xyz.
+ * Wesley's own deployment of Notebarn, at api.notebarn.wesleyed.com.
  *
  * To run your own, copy this object and change its domain, buckets, Atlas org and contact email.
  */
@@ -51,8 +51,8 @@ object WesleyDeployment : TerraformAwsServerlessDomainBuilder<Server>(Server) {
     override val storageBucket = "wesleyedwards-terraform"
     override val storageBucketPath: String = "notebarn/server/prod"
 
-    override val domain = "api.notebarn.a.wesleyedwards.xyz"
-    override val domainZone = "a.wesleyedwards.xyz"
+    override val domain = "api.notebarn.wesleyed.com"
+    override val domainZone = "wesleyed.com"
     override val region = Region.US_WEST_2!!
 
     override val timeout: Duration = 5.minutes

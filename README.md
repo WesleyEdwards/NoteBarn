@@ -115,7 +115,7 @@ Server (Lambda, Mongo Atlas free tier, SES email, DynamoDB cache):
 
 1. Run `WesleyDeployment.EditSettings.main` to create or edit the encrypted `server/wesley-aws-settings` (put its
    password in `server/local.properties` as `DEPLOYMENT_SETTINGS_KEY`).
-2. Run `WesleyDeployment.Deploy.main`. It deploys to `api.notebarn.a.wesleyedwards.xyz`; only the emails in
+2. Run `WesleyDeployment.Deploy.main`. It deploys to `api.notebarn.wesleyed.com`; only the emails in
    `allowedEmails` or `admins` can sign in, and those in `admins` get the Root role (for the admin endpoints, like
    `/meta`, and the web app's Admin page at `/admin`, which shows Atlas storage against the free tier's 512 MB). Both lists are kept in `wesley-aws-settings`, not in git; change them with step 1.
 
@@ -131,7 +131,7 @@ To restore, download a backup from the bucket and load it into an **empty** data
 `database` in a settings file at it and run `./gradlew server:run --args="--settings <file> restore <backup>.json.gz"`,
 or run `MainKt` with those arguments from the IDE. Locally, backups go to `server/local/backups/`.
 
-Web: `cd web && npm run deploy` (S3 + CloudFront at `notebarn.a.wesleyedwards.xyz`, Terraform state in the
+Web: `cd web && npm run deploy` (S3 + CloudFront at `notebarn.wesleyed.com`, Terraform state in the
 `wesleyedwards-terraform` bucket under `notebarn/`). On the phone, open it and use **Add to Home Screen**.
 
 **Deploying your own:** copy `WesleyDeployment.kt` and change its domain, buckets, Atlas org and contact email (its
@@ -166,7 +166,7 @@ its bytes until that copy expires.
   server checks the bytes match the hash.
 - `POST /note/attachment-urls {vault, hashes}`: download links, in the same order.
 - Live Changes websocket: `/?path=/note/live&vault=<id>&jwt=<access token>` (deployed: on
-  `wss://ws.api.notebarn.a.wesleyedwards.xyz`; locally: the server's own address). It sends `{vault, latestVersion}`
+  `wss://ws.api.notebarn.wesleyed.com`; locally: the server's own address). It sends `{vault, latestVersion}`
   whenever a note in the vault changes; ask `changes` from there. Nothing is sent for changes made while it's
   disconnected, so ask `changes` whenever it (re)opens. Send anything every few minutes to keep it open (API Gateway
   closes idle websockets after 10 minutes); the server ignores it.

@@ -5,6 +5,7 @@ import com.lightningkite.lightningserver.NotFoundException
 import com.lightningkite.lightningserver.auth.*
 import com.lightningkite.lightningserver.definition.builder.ServerBuilder
 import com.lightningkite.lightningserver.runtime.ServerRuntime
+import com.lightningkite.lightningserver.runtime.now
 import com.lightningkite.lightningserver.sessions.AuthEndpoints
 import com.lightningkite.lightningserver.sessions.proofs.EmailProofEndpoints
 import com.lightningkite.lightningserver.sessions.proofs.PinHandler
@@ -19,6 +20,7 @@ import com.lightningkite.services.email.EmailAddressWithName
 import com.wesleyedwards.notebarn.data.UserEndpoints.info
 import kotlinx.serialization.KSerializer
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 
@@ -113,9 +115,9 @@ object UserAuth : PrincipalType<User, User.ID>, ServerBuilder() {
 
         // Sessions never expire: the phone and the Obsidian plugin should stay logged in.
         context(server: ServerRuntime)
-        override suspend fun sessionExpiration(subject: User): Instant? = null
+        override suspend fun sessionExpiration(subject: User) = now() + 365.days
 
         context(server: ServerRuntime)
-        override suspend fun sessionStaleAfter(subject: User): Duration? = null
+        override suspend fun sessionStaleAfter(subject: User) = 90.days
     }
 }

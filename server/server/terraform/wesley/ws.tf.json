@@ -91,7 +91,7 @@
         },
         "aws_apigatewayv2_domain_name": {
             "ws": {
-                "domain_name": "ws.api.notebarn.a.wesleyedwards.xyz",
+                "domain_name": "ws.api.notebarn.wesleyed.com",
                 "depends_on": [
                     "aws_acm_certificate_validation.ws"
                 ],
@@ -123,7 +123,7 @@
         },
         "aws_acm_certificate": {
             "ws": {
-                "domain_name": "ws.api.notebarn.a.wesleyedwards.xyz",
+                "domain_name": "ws.api.notebarn.wesleyed.com",
                 "validation_method": "DNS"
             }
         }

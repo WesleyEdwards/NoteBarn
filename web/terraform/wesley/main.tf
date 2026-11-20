@@ -17,8 +17,8 @@ terraform {
 }
 terraform {
   backend "s3" {
-    bucket = "wesleyedwards-terraform"
-    key    = "notebarn/prod-frontend"
+    bucket = "wesleyed-terraform"
+    key    = "notebarn/frontend/prod"
     region = "us-west-2"
   }
 }
@@ -32,15 +32,15 @@ provider "aws" {
 }
 
 module "web" {
-  source = "github.com/lightningkite/terraform-static-site.git?ref=1.2.2"
+  source = "github.com/lightningkite/terraform-static-site.git?ref=1.2.4"
   providers = {
     aws = aws
     aws.acm = aws.acm
   }
   deployment_name = "prod"
   dist_folder = "../../dist"
-  domain_name = "notebarn.a.wesleyedwards.xyz"
-  domain_name_zone = "a.wesleyedwards.xyz"
+  domain_name = "notebarn.wesleyed.com"
+  domain_name_zone = "wesleyed.com"
   react_mode = true
   lambda_src_dir = "og-tags"
   lambda_dist_dir = "og-tags.zip"

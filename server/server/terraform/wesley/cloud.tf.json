@@ -2,7 +2,7 @@
     "data": {
         "aws_route53_zone": {
             "main": {
-                "name": "a.wesleyedwards.xyz"
+                "name": "wesleyed.com"
             }
         }
     }

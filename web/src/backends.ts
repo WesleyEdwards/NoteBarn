@@ -1,4 +1,4 @@
-const PRODUCTION = "https://api.notebarn.a.wesleyedwards.xyz"
+const PRODUCTION = "https://api.notebarn.wesleyed.com"
 
 /** Where the server is. The Vite dev server proxies /api to a local server; a built app talks to the deployed one. */
 export const BACKEND_URL: string = import.meta.env.VITE_BACKEND_URL ?? (import.meta.env.DEV ? "/api" : PRODUCTION)
@@ -10,7 +10,7 @@ export const BACKEND_URL: string = import.meta.env.VITE_BACKEND_URL ?? (import.m
 export const WEBSOCKET_URL: string =
   import.meta.env.VITE_WEBSOCKET_URL ??
   (BACKEND_URL === PRODUCTION
-    ? "wss://ws.api.notebarn.a.wesleyedwards.xyz"
+    ? "wss://ws.api.notebarn.wesleyed.com"
     : (() => {
         const url = new URL(BACKEND_URL, window.location.href)
         url.protocol = url.protocol === "https:" ? "wss:" : "ws:"

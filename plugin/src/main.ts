@@ -17,7 +17,7 @@ interface Settings {
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  serverUrl: "https://api.notebarn.a.wesleyedwards.xyz",
+  serverUrl: "https://api.notebarn.wesleyed.com",
   sessionToken: "",
   email: "",
   vaultId: "",

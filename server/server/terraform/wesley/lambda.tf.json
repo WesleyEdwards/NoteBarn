@@ -196,8 +196,8 @@
             "secretBasis": "${random_password.secretBasis.result}",
             "general": {
                 "projectName": "Notebarn",
-                "publicUrl": "https://api.notebarn.a.wesleyedwards.xyz",
-                "wsUrl": "wss://ws.api.notebarn.a.wesleyedwards.xyz?path=",
+                "publicUrl": "https://api.notebarn.wesleyed.com",
+                "wsUrl": "wss://ws.api.notebarn.wesleyed.com?path=",
                 "debug": false,
                 "emergencyContact": "wesleyutahedwards@gmail.com"
             },
@@ -287,7 +287,7 @@
                 "maxSpansPerSecond": null,
                 "maxLogsPerSecond": null
             },
-            "email": "smtp://${aws_iam_access_key.email.id}:${aws_iam_access_key.email.ses_smtp_password_v4}@email-smtp.us-west-2.amazonaws.com:587?fromEmail=noreply@api.notebarn.a.wesleyedwards.xyz",
+            "email": "smtp://${aws_iam_access_key.email.id}:${aws_iam_access_key.email.ses_smtp_password_v4}@email-smtp.us-west-2.amazonaws.com:587?fromEmail=noreply@api.notebarn.wesleyed.com",
             "admins": "${var.admins}",
             "backups": "s3://${aws_s3_bucket.backups.bucket}.s3-${aws_s3_bucket.backups.region}.amazonaws.com/?signedUrlDuration=1h"
         },

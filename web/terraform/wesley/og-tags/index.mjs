@@ -1,7 +1,7 @@
 // Claude: Lambda@Edge (origin-response) that gives share links (/s/<id>) the note's title and opening text, so link
 // previews in chat apps show them. Lambda@Edge can't have environment variables, hence the hardcoded addresses.
-const SITE = "https://notebarn.a.wesleyedwards.xyz"
-const API = "https://api.notebarn.a.wesleyedwards.xyz"
+const SITE = "https://notebarn.wesleyed.com"
+const API = "https://api.notebarn.wesleyed.com"
 
 const escape = (s) => s.replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c])
 

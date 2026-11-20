@@ -17,7 +17,7 @@
         "aws_ses_domain_mail_from": {
             "email": {
                 "domain": "${aws_ses_domain_identity.email.domain}",
-                "mail_from_domain": "mail.api.notebarn.a.wesleyedwards.xyz"
+                "mail_from_domain": "mail.api.notebarn.wesleyed.com"
             }
         },
         "aws_iam_access_key": {
@@ -46,7 +46,7 @@
                 "records": [
                     "${aws_ses_domain_identity.email.verification_token}"
                 ],
-                "name": "_amazonses.api.notebarn.a.wesleyedwards.xyz",
+                "name": "_amazonses.api.notebarn.wesleyed.com",
                 "type": "TXT",
                 "ttl": "600"
             },
@@ -74,7 +74,7 @@
                     "${element(aws_ses_domain_dkim.email_dkim.dkim_tokens, count.index)}.dkim.amazonses.com"
                 ],
                 "count": 3,
-                "name": "${element(aws_ses_domain_dkim.email_dkim.dkim_tokens, count.index)}._domainkey.api.notebarn.a.wesleyedwards.xyz",
+                "name": "${element(aws_ses_domain_dkim.email_dkim.dkim_tokens, count.index)}._domainkey.api.notebarn.wesleyed.com",
                 "type": "CNAME",
                 "ttl": "600"
             },
@@ -83,7 +83,7 @@
                 "records": [
                     "v=DMARC1;p=quarantine;pct=75;rua=mailto:wesleyutahedwards@gmail.com"
                 ],
-                "name": "_dmarc.api.notebarn.a.wesleyedwards.xyz",
+                "name": "_dmarc.api.notebarn.wesleyed.com",
                 "type": "TXT",
                 "ttl": "300"
             },
@@ -92,7 +92,7 @@
                 "records": [
                     "v=spf1 include:amazonses.com -all"
                 ],
-                "name": "api.notebarn.a.wesleyedwards.xyz",
+                "name": "api.notebarn.wesleyed.com",
                 "type": "TXT",
                 "ttl": "300"
             }
@@ -110,7 +110,7 @@
         },
         "aws_ses_domain_identity": {
             "email": {
-                "domain": "api.notebarn.a.wesleyedwards.xyz"
+                "domain": "api.notebarn.wesleyed.com"
             }
         },
         "aws_ses_domain_dkim": {
