@@ -31,7 +31,7 @@ object ShareEndpoints : ServerBuilder() {
         permissions = {
             ModelPermissions(
                 create = Condition.Never,
-                read = condition { it.owner eq auth.id },
+                read = Condition { it.owner eq auth.id },
                 update = Condition.Never,
                 delete = Condition.Never,
             )
@@ -56,15 +56,15 @@ object ShareEndpoints : ServerBuilder() {
         implementation = { input: ShareNote ->
             val vault = ownedVault(input.vault, auth.id)
             val path = NoteEndpoints.normalizePath(input.path)
-            val note = Note.info.table().findOne(condition { (it.vault eq vault._id) and (it.path eq path) })
+            val note = Note.info.table().findOne(Condition { (it.vault eq vault._id) and (it.path eq path) })
             if (note == null || note.deleted) throw NotFoundException("No note at $path.")
             val table = info.table()
-            table.findOne(condition { (it.vault eq vault._id) and (it.path eq path) })
+            table.findOne(Condition { (it.vault eq vault._id) and (it.path eq path) })
                 ?: try {
                     table.insertOne(Share(owner = vault.owner, vault = vault._id, path = path))!!
                 } catch (e: UniqueViolationException) {
                     // Shared from another device at the same moment.
-                    table.findOne(condition { (it.vault eq vault._id) and (it.path eq path) })!!
+                    table.findOne(Condition { (it.vault eq vault._id) and (it.path eq path) })!!
                 }
         }
     )
@@ -76,7 +76,7 @@ object ShareEndpoints : ServerBuilder() {
         implementation = { input: ShareNote ->
             val vault = ownedVault(input.vault, auth.id)
             val path = NoteEndpoints.normalizePath(input.path)
-            info.table().deleteManyIgnoringOld(condition { (it.vault eq vault._id) and (it.path eq path) })
+            info.table().deleteManyIgnoringOld(Condition { (it.vault eq vault._id) and (it.path eq path) })
             Unit
         }
     )
@@ -90,10 +90,10 @@ object ShareEndpoints : ServerBuilder() {
             val gone = NotFoundException("This link doesn't work anymore. Its owner may have stopped sharing it.")
             val id = Uuid.parseOrNull(raw)?.let { Share.ID(it) } ?: throw gone
             val share = info.table().get(id) ?: throw gone
-            val note = Note.info.table().findOne(condition { (it.vault eq share.vault) and (it.path eq share.path) })
+            val note = Note.info.table().findOne(Condition { (it.vault eq share.vault) and (it.path eq share.path) })
             if (note == null || note.deleted || note.attachment) throw gone
             val files = Note.info.table()
-                .find(condition { (it.vault eq share.vault) and (it.attachment eq true) and (it.deleted eq false) })
+                .find(Condition { (it.vault eq share.vault) and (it.attachment eq true) and (it.deleted eq false) })
                 .toList()
             val byPath = files.associateBy { it.path }
             SharedNote(
@@ -111,18 +111,18 @@ object ShareEndpoints : ServerBuilder() {
     /** Moves a note's share along when the note is renamed. */
     context(_: ServerRuntime)
     suspend fun moved(vault: Vault.ID, from: String, to: String) {
-        info.table().updateManyIgnoringResult(condition { (it.vault eq vault) and (it.path eq from) }, modification { it.path assign to })
+        info.table().updateManyIgnoringResult(Condition { (it.vault eq vault) and (it.path eq from) }, Modification { it.path assign to })
     }
 
     /** Ends a note's share when the note is deleted, so a new note at that path isn't shared by accident. */
     context(_: ServerRuntime)
     suspend fun deleted(vault: Vault.ID, path: String) {
-        info.table().deleteManyIgnoringOld(condition { (it.vault eq vault) and (it.path eq path) })
+        info.table().deleteManyIgnoringOld(Condition { (it.vault eq vault) and (it.path eq path) })
     }
 
     context(_: ServerRuntime)
     suspend fun vaultDeleted(vault: Vault.ID) {
-        info.table().deleteManyIgnoringOld(condition { it.vault eq vault })
+        info.table().deleteManyIgnoringOld(Condition { it.vault eq vault })
     }
 
     /**

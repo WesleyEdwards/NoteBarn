@@ -60,7 +60,7 @@ object NoteEndpoints : ServerBuilder() {
         permissions = {
             ModelPermissions(
                 create = Condition.Never,
-                read = condition { it.owner eq auth.id },
+                read = Condition { it.owner eq auth.id },
                 update = Condition.Never,
                 delete = Condition.Never,
             )
@@ -141,7 +141,7 @@ object NoteEndpoints : ServerBuilder() {
     /** Hands out the vault's next version. Versions skipped by a failed write are just never used. */
     context(_: ServerRuntime)
     private suspend fun nextVersion(vault: Vault.ID): Long =
-        Vault.info.table().updateOne(condition { it._id eq vault }, modification { it.latestVersion += 1L }).new?.latestVersion
+        Vault.info.table().updateOne(Condition { it._id eq vault }, Modification { it.latestVersion += 1L }).new?.latestVersion
             ?: throw NotFoundException("No such vault.")
 
     /** Where an attachment's bytes are kept: by vault and hash, so the same file is only ever stored once per vault. */
@@ -161,8 +161,8 @@ object NoteEndpoints : ServerBuilder() {
         val uploadedBefore = Clock.System.now() - 1.days
         for (vault in Vault.info.table().find(Condition.Always).toList()) {
             val used = HashSet<String>()
-            info.table().find(condition { (it.vault eq vault._id) and (it.attachment eq true) }).toList().mapTo(used) { it.hash }
-            historyInfo.table().find(condition { (it.vault eq vault._id) and (it.attachment eq true) }).toList().mapTo(used) { it.hash }
+            info.table().find(Condition { (it.vault eq vault._id) and (it.attachment eq true) }).toList().mapTo(used) { it.hash }
+            historyInfo.table().find(Condition { (it.vault eq vault._id) and (it.attachment eq true) }).toList().mapTo(used) { it.hash }
             val unused = Server.files().root.then("attachments/${vault._id}").list().filter { it.name !in used }
             for (file in unused) {
                 // The local file system doesn't know when a file was written, so locally anything unused goes.
@@ -193,7 +193,7 @@ object NoteEndpoints : ServerBuilder() {
 
     context(_: ServerRuntime)
     private suspend fun find(vault: Vault.ID, path: String): Note? =
-        info.table().findOne(condition { (it.vault eq vault) and (it.path eq path) })
+        info.table().findOne(Condition { (it.vault eq vault) and (it.path eq path) })
 
     /**
      * Saves [content] at [path] in place of [existing], but only if the note is still exactly [existing] (nothing
@@ -224,8 +224,8 @@ object NoteEndpoints : ServerBuilder() {
             }
         }
         return info.table().updateOne(
-            condition { (it._id eq existing._id) and (it.version eq existing.version) },
-            modification {
+            Condition { (it._id eq existing._id) and (it.version eq existing.version) },
+            Modification {
                 it.path assign path
                 it.content assign body.content
                 it.hash assign body.hash
@@ -243,8 +243,8 @@ object NoteEndpoints : ServerBuilder() {
         if (keepCopy) NoteHistory.beforeChange(historyInfo.table(), existing, VersionReason.Delete)
         val version = nextVersion(vault)
         return info.table().updateOne(
-            condition { (it._id eq existing._id) and (it.version eq existing.version) },
-            modification {
+            Condition { (it._id eq existing._id) and (it.version eq existing.version) },
+            Modification {
                 it.content assign ""
                 it.hash assign sha256Hex("")
                 it.size assign 0
@@ -303,7 +303,7 @@ object NoteEndpoints : ServerBuilder() {
             val file = blob(vault._id, input.hash)
             // Bytes that some note in this vault already uses were checked when it was saved.
             val known = info.table().findOne(
-                condition { (it.vault eq vault._id) and (it.hash eq input.hash) and (it.attachment eq true) and (it.deleted eq false) }
+                Condition { (it.vault eq vault._id) and (it.hash eq input.hash) and (it.attachment eq true) and (it.deleted eq false) }
             )
             val size = known?.size?.toLong() ?: run {
                 val (hash, size) = hashOf(file) ?: throw BadRequestException("The attachment's bytes haven't been uploaded.")
@@ -379,7 +379,7 @@ object NoteEndpoints : ServerBuilder() {
             val vault = ownedVault(input.vault, auth.id)
             val limit = input.limit.coerceIn(1, 1000)
             val found = info.table().find(
-                condition { (it.vault eq vault._id) and (it.version gt input.since) },
+                Condition { (it.vault eq vault._id) and (it.version gt input.since) },
                 orderBy = sort { it.version.ascending() },
                 limit = limit + 1,
             ).toList()
@@ -406,7 +406,7 @@ object NoteEndpoints : ServerBuilder() {
         auth = UserAuth.require(),
         implementation = { vaultId: Vault.ID ->
             val vault = ownedVault(vaultId, auth.id)
-            val notes = info.table().find(condition { it.vault eq vault._id }).toList()
+            val notes = info.table().find(Condition { it.vault eq vault._id }).toList()
             Manifest(
                 notes = notes.map { NoteSummary(it.path, it.version, it.hash, it.size, it.modifiedAt, it.deleted, it.attachment) }
                     .sortedBy { it.path.lowercase() },
@@ -423,7 +423,7 @@ object NoteEndpoints : ServerBuilder() {
             val vault = ownedVault(input.vault, auth.id)
             val path = normalizePath(input.path)
             historyInfo.table().find(
-                condition { (it.vault eq vault._id) and (it.path eq path) },
+                Condition { (it.vault eq vault._id) and (it.path eq path) },
                 orderBy = sort { it.savedAt.descending() },
                 limit = 500,
             ).toList().map(NoteHistory::summary)
@@ -466,9 +466,9 @@ object NoteEndpoints : ServerBuilder() {
         auth = UserAuth.require(),
         implementation = { vaultId: Vault.ID ->
             val vault = ownedVault(vaultId, auth.id)
-            val gone = info.table().find(condition { (it.vault eq vault._id) and (it.deleted eq true) }).toList().map { it.path }.toSet()
+            val gone = info.table().find(Condition { (it.vault eq vault._id) and (it.deleted eq true) }).toList().map { it.path }.toSet()
             historyInfo.table().find(
-                condition { (it.vault eq vault._id) and (it.reason eq VersionReason.Delete) },
+                Condition { (it.vault eq vault._id) and (it.reason eq VersionReason.Delete) },
                 orderBy = sort { it.savedAt.descending() },
                 limit = 2000,
             ).toList()
@@ -497,7 +497,7 @@ object NoteEndpoints : ServerBuilder() {
             val q = input.query.trim()
             if (q.isEmpty()) return@ApiHttpHandler emptyList<SearchHit>()
             val found = info.table().find(
-                condition { (it.vault eq vault._id) and (it.deleted eq false) and ((it.path contains q) or ((it.attachment eq false) and (it.content contains q))) },
+                Condition { (it.vault eq vault._id) and (it.deleted eq false) and ((it.path contains q) or ((it.attachment eq false) and (it.content contains q))) },
                 limit = input.limit.coerceIn(1, 200),
             ).toList()
             // Notes whose name matches come first.

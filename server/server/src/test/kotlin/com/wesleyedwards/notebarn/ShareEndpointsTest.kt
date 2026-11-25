@@ -12,7 +12,7 @@ import com.lightningkite.services.data.MediaType
 import com.lightningkite.services.data.TypedData
 import com.lightningkite.services.data.toEmailAddress
 import com.lightningkite.services.database.*
-import com.lightningkite.services.files.PublicFileSystem
+import com.lightningkite.services.files.ExternalFileSystem
 import com.wesleyedwards.notebarn.data.NoteEndpoints
 import com.wesleyedwards.notebarn.data.ShareEndpoints
 import com.wesleyedwards.notebarn.data.UserEndpoints.info
@@ -33,7 +33,7 @@ class ShareEndpointsTest {
         settings = {
             database set Database.Settings("ram")
             cache set Cache.Settings("ram")
-            files set PublicFileSystem.Settings("file://${kotlin.io.path.createTempDirectory("notebarn-files")}?serveUrl=files")
+            files set ExternalFileSystem.Settings("file://${kotlin.io.path.createTempDirectory("notebarn-files")}?serveUrl=files")
         },
         action = action,
     )

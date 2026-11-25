@@ -10,7 +10,7 @@ import com.lightningkite.lightningserver.typed.test
 import com.lightningkite.services.cache.Cache
 import com.lightningkite.services.data.toEmailAddress
 import com.lightningkite.services.database.*
-import com.lightningkite.services.files.PublicFileSystem
+import com.lightningkite.services.files.ExternalFileSystem
 import com.wesleyedwards.notebarn.data.NoteEndpoints
 import com.wesleyedwards.notebarn.data.NoteEndpoints.info
 import com.wesleyedwards.notebarn.data.NoteHistory
@@ -52,7 +52,7 @@ class NoteHistoryTest {
         settings = {
             database set Database.Settings("ram")
             cache set Cache.Settings("ram")
-            files set PublicFileSystem.Settings("file://${kotlin.io.path.createTempDirectory("notebarn-files")}?serveUrl=files")
+            files set ExternalFileSystem.Settings("file://${kotlin.io.path.createTempDirectory("notebarn-files")}?serveUrl=files")
         },
         action = action,
     )
@@ -227,7 +227,7 @@ class NoteHistoryTest {
         later += 1.minutes
         write(auth, vault, "A.md", "two")
         assertEquals(1, NoteVersion.info.table().count(Condition.Always))
-        Vault.info.table().deleteOne(condition { it._id eq vault._id })
+        Vault.info.table().deleteOne(Condition { it._id eq vault._id })
         assertEquals(0, NoteVersion.info.table().count(Condition.Always))
     }
 }

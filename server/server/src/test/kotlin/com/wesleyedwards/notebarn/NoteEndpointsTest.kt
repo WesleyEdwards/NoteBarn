@@ -13,7 +13,7 @@ import com.lightningkite.services.data.MediaType
 import com.lightningkite.services.data.TypedData
 import com.lightningkite.services.data.toEmailAddress
 import com.lightningkite.services.database.*
-import com.lightningkite.services.files.PublicFileSystem
+import com.lightningkite.services.files.ExternalFileSystem
 import com.wesleyedwards.notebarn.data.AdminEndpoints
 import com.wesleyedwards.notebarn.data.NoteEndpoints
 import com.wesleyedwards.notebarn.data.UserEndpoints.info
@@ -35,7 +35,7 @@ class NoteEndpointsTest {
         settings = {
             database set Database.Settings("ram")
             cache set Cache.Settings("ram")
-            files set PublicFileSystem.Settings("file://${kotlin.io.path.createTempDirectory("notebarn-files")}?serveUrl=files")
+            files set ExternalFileSystem.Settings("file://${kotlin.io.path.createTempDirectory("notebarn-files")}?serveUrl=files")
         },
         action = action,
     )
@@ -183,7 +183,7 @@ class NoteEndpointsTest {
     fun `deleting a vault deletes its notes`() = testServer {
         val (auth, vault) = setUp()
         NoteEndpoints.write.test(auth, WriteNote(vault._id, "A.md", "x"))
-        Vault.info.table().deleteOne(condition { it._id eq vault._id })
+        Vault.info.table().deleteOne(Condition { it._id eq vault._id })
         assertEquals(0, NoteEndpoints.rest.query.test(auth, Query(Condition.Always)).size)
     }
 

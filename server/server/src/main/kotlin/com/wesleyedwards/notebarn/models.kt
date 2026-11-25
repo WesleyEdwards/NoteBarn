@@ -1,7 +1,7 @@
 package com.wesleyedwards.notebarn
 
 import com.lightningkite.services.data.EmailAddress
-import com.lightningkite.services.data.GenerateDataClassPaths
+import com.lightningkite.services.data.Queryable
 import com.lightningkite.services.data.IndexSet
 import com.lightningkite.services.data.IndexUniqueness
 import com.lightningkite.services.database.HasId
@@ -19,8 +19,7 @@ interface HasOwner<T : Comparable<T>> : HasId<T> {
 @Serializable
 enum class UserRole { User, Admin, Root }
 
-@Serializable
-@GenerateDataClassPaths
+@Queryable
 data class User(
     override val _id: ID = ID(),
     val email: EmailAddress,
@@ -39,8 +38,7 @@ data class User(
  * A set of notes, like an Obsidian vault. Every change to a note in the vault takes the next number from
  * [latestVersion], so "everything after version N" is how sync clients catch up.
  */
-@Serializable
-@GenerateDataClassPaths
+@Queryable
 data class Vault(
     override val _id: ID = ID(),
     override val owner: User.ID,
@@ -68,8 +66,7 @@ data class Vault(
  *
  * Only written through NoteEndpoints, which hand out versions and check them, so no change is ever silently lost.
  */
-@Serializable
-@GenerateDataClassPaths
+@Queryable
 @IndexSet(["vault", "path"], unique = IndexUniqueness.Unique)
 @IndexSet(["vault", "version"])
 data class Note(
@@ -255,8 +252,7 @@ enum class VersionReason {
  * every so often while a note is being edited, and each is deleted at [expiresAt]. When a note is renamed, its
  * history moves with it.
  */
-@Serializable
-@GenerateDataClassPaths
+@Queryable
 @IndexSet(["vault", "path", "savedAt"])
 @IndexSet(["vault", "expiresAt"])
 @IndexSet(["vault", "reason", "savedAt"])
@@ -344,8 +340,7 @@ data class RestoreVersion(
  * A link anyone can use to read one note, as it is whenever they open it, until its owner stops sharing it. The
  * [_id] is the link's secret. When the note is renamed in the web app the share follows it; deleting the note ends it.
  */
-@Serializable
-@GenerateDataClassPaths
+@Queryable
 @IndexSet(["vault", "path"], unique = IndexUniqueness.Unique)
 data class Share(
     override val _id: ID = ID(),

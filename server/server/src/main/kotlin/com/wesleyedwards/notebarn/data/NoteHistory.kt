@@ -41,7 +41,7 @@ object NoteHistory {
         if (existing.deleted) return
         val now = now()
         val latest = table.find(
-            condition { (it.vault eq existing.vault) and (it.path eq existing.path) },
+            Condition { (it.vault eq existing.vault) and (it.path eq existing.path) },
             orderBy = sort { it.savedAt.descending() },
             limit = 1,
         ).firstOrNull()
@@ -50,8 +50,8 @@ object NoteHistory {
             // Already have this content. A delete just makes sure it's marked as one, and kept as long.
             if (reason == VersionReason.Delete && latest.reason != VersionReason.Delete) {
                 table.updateOneIgnoringResult(
-                    condition { it._id eq latest._id },
-                    modification {
+                    Condition { it._id eq latest._id },
+                    Modification {
                         it.reason assign VersionReason.Delete
                         it.savedAt assign now
                         it.expiresAt assign now + LONG_KEEP
@@ -86,14 +86,14 @@ object NoteHistory {
                 expiresAt = now + keep,
             )
         )
-        table.deleteManyIgnoringOld(condition { (it.vault eq existing.vault) and (it.expiresAt lt now) })
+        table.deleteManyIgnoringOld(Condition { (it.vault eq existing.vault) and (it.expiresAt lt now) })
     }
 
     /** A renamed note takes its history along. */
     suspend fun moved(table: Table<NoteVersion>, vault: Vault.ID, from: String, to: String) {
         table.updateManyIgnoringResult(
-            condition { (it.vault eq vault) and (it.path eq from) },
-            modification { it.path assign to }
+            Condition { (it.vault eq vault) and (it.path eq from) },
+            Modification { it.path assign to }
         )
     }
 

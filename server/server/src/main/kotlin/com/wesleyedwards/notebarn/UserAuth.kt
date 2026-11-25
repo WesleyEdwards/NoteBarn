@@ -42,7 +42,7 @@ object UserAuth : PrincipalType<User, User.ID>, ServerBuilder() {
         "email" -> {
             if (!canLogIn(value)) throw ForbiddenException("This email isn't allowed to log in.")
             User.info.table().run {
-                findOne(condition { it.email eq value.toEmailAddress() })
+                findOne(Condition { it.email eq value.toEmailAddress() })
                     ?: insertOne(User(email = value.toEmailAddress()))
             }
         }

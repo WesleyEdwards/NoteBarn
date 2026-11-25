@@ -16,7 +16,7 @@ object UserEndpoints : ServerBuilder() {
         tableName = "User",
         auth = UserAuth.require(),
         permissions = {
-            val self = condition<User> { it._id eq auth.id }
+            val self = Condition<User> { it._id eq auth.id }
             ModelPermissions(
                 create = Condition.Never,
                 read = self,
@@ -26,8 +26,8 @@ object UserEndpoints : ServerBuilder() {
         },
         signals = {
             it.postDelete { user ->
-                Vault.info.table().find(condition { v -> v.owner eq user._id }).collect { v -> VaultEndpoints.deleteVaultNotes(v._id) }
-                Vault.info.table().deleteManyIgnoringOld(condition { v -> v.owner eq user._id })
+                Vault.info.table().find(Condition { v -> v.owner eq user._id }).collect { v -> VaultEndpoints.deleteVaultNotes(v._id) }
+                Vault.info.table().deleteManyIgnoringOld(Condition { v -> v.owner eq user._id })
             }
         }
     )

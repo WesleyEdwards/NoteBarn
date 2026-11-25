@@ -5,14 +5,15 @@ import com.lightningkite.lightningserver.runtime.ServerRuntime
 import com.lightningkite.lightningserver.typed.AuthAccess
 import com.lightningkite.lightningserver.typed.auth
 import com.lightningkite.services.database.*
+import com.lightningkite.services.database.optics.Optic
 import java.security.MessageDigest
 
 /** Only the owner may do anything with their own records. */
 context(_: ServerRuntime)
 inline fun <reified T : HasOwner<*>> AuthAccess<User>.ownerPerms(
-    owner: (DataClassPath<T, T>) -> DataClassPath<T, User.ID>
+    owner: (Optic<T, T>) -> Optic<T, User.ID>
 ): ModelPermissions<T> {
-    val isMine: Condition<T> = condition { owner(it).eq(this.auth.id) }
+    val isMine: Condition<T> = Condition { owner(it).eq(this.auth.id) }
     return ModelPermissions(
         read = isMine,
         create = isMine,

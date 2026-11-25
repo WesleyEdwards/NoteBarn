@@ -42,8 +42,8 @@ object VaultEndpoints : ServerBuilder() {
 
     context(_: ServerRuntime)
     suspend fun deleteVaultNotes(vault: Vault.ID) {
-        Note.info.table().deleteManyIgnoringOld(condition { it.vault eq vault })
-        NoteVersion.info.table().deleteManyIgnoringOld(condition { it.vault eq vault })
+        Note.info.table().deleteManyIgnoringOld(Condition { it.vault eq vault })
+        NoteVersion.info.table().deleteManyIgnoringOld(Condition { it.vault eq vault })
         ShareEndpoints.vaultDeleted(vault)
         // And the attachments' bytes. Best effort: leftover files only cost storage.
         try {

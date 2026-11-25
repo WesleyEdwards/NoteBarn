@@ -8,7 +8,7 @@ import com.lightningkite.lightningserver.typed.test
 import com.lightningkite.services.cache.Cache
 import com.lightningkite.services.data.toEmailAddress
 import com.lightningkite.services.database.*
-import com.lightningkite.services.files.PublicFileSystem
+import com.lightningkite.services.files.ExternalFileSystem
 import com.wesleyedwards.notebarn.data.Backups
 import com.wesleyedwards.notebarn.data.NoteEndpoints
 import com.wesleyedwards.notebarn.data.NoteEndpoints.info
@@ -25,8 +25,8 @@ class BackupsTest {
         settings = {
             database set Database.Settings("ram")
             cache set Cache.Settings("ram")
-            files set PublicFileSystem.Settings("file://${createTempDirectory("notebarn-files")}?serveUrl=files")
-            backups set PublicFileSystem.Settings("file://$backupDir?serveUrl=backups")
+            files set ExternalFileSystem.Settings("file://${createTempDirectory("notebarn-files")}?serveUrl=files")
+            backups set ExternalFileSystem.Settings("file://$backupDir?serveUrl=backups")
         },
         action = action,
     )
@@ -48,7 +48,7 @@ class BackupsTest {
 
         testServer {
             Backups.restore(file.readBytes())
-            assertEquals("two", Note.info.table().findOne(condition { it.path eq "a.md" })!!.content)
+            assertEquals("two", Note.info.table().findOne(Condition { it.path eq "a.md" })!!.content)
             assertEquals(1, User.info.table().count())
             assertFailsWith<IllegalStateException> { Backups.restore(file.readBytes()) }
         }
