@@ -13,6 +13,7 @@ import com.lightningkite.lightningserver.sessions.proofs.proofMethods
 import com.lightningkite.lightningserver.typed.AuthAccess
 import com.lightningkite.lightningserver.typed.auth
 import com.lightningkite.lightningserver.typed.sdk.module
+import com.lightningkite.services.data.EmailAddress
 import com.lightningkite.services.data.toEmailAddress
 import com.lightningkite.services.database.*
 import com.lightningkite.services.email.Email
@@ -76,16 +77,16 @@ object UserAuth : PrincipalType<User, User.ID>, ServerBuilder() {
     val pins = PinHandler(Server.cache, "pins", availableCharacters = ('0'..'9').toList())
 
     context(_: ServerRuntime)
-    private fun codeEmail(to: String, pin: String): Email {
+    private fun codeEmail(to: EmailAddress, pin: String): Email {
         // Checked here so no code is ever emailed to an address that couldn't use it.
-        if (!canLogIn(to)) throw ForbiddenException("This email isn't allowed to log in.")
+        if (!canLogIn(to.raw)) throw ForbiddenException("This email isn't allowed to log in.")
         val minutes = pins.expiration.inWholeMinutes
         return Email(
             subject = "Your Notebarn code is $pin",
             to = listOf(EmailAddressWithName(to)),
             html = """
                 <div style="font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:480px;margin:24px auto;color:#222">
-                  <p>Enter this code to log in to Notebarn as $to:</p>
+                  <p>Enter this code to log in to Notebarn as ${to.raw}:</p>
                   <p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:24px 0">$pin</p>
                   <p style="color:#666">It expires in $minutes minutes. Didn't request it? You can ignore this email.</p>
                 </div>

@@ -19,7 +19,7 @@ import com.lightningkite.lightningserver.typed.modelInfo
 import com.lightningkite.services.database.*
 import com.wesleyedwards.notebarn.*
 import com.wesleyedwards.notebarn.data.VaultEndpoints.info
-import com.lightningkite.services.files.FileObject
+import com.lightningkite.services.files.ExternalFile
 import kotlinx.coroutines.flow.toList
 import java.security.MessageDigest
 import kotlin.time.Clock
@@ -55,6 +55,7 @@ object NoteEndpoints : ServerBuilder() {
      * below instead, which hand out versions and refuse to overwrite a change the writer hasn't seen.
      */
     private val info: ModelInfo<User, Note, Note.ID> = Server.database.modelInfo(
+        tableName = "Note",
         auth = UserAuth.require(),
         permissions = {
             ModelPermissions(
@@ -70,6 +71,7 @@ object NoteEndpoints : ServerBuilder() {
 
     /** Earlier copies of notes (see [NoteHistory]). Only read through the endpoints below, never written by clients. */
     private val historyInfo: ModelInfo<User, NoteVersion, NoteVersion.ID> = Server.database.modelInfo(
+        tableName = "NoteVersion",
         auth = UserAuth.require(),
         permissions = {
             ModelPermissions(
@@ -144,7 +146,7 @@ object NoteEndpoints : ServerBuilder() {
 
     /** Where an attachment's bytes are kept: by vault and hash, so the same file is only ever stored once per vault. */
     context(_: ServerRuntime)
-    fun blob(vault: Vault.ID, hash: String): FileObject {
+    fun blob(vault: Vault.ID, hash: String): ExternalFile {
         if (!SHA256_HEX.matches(hash)) throw BadRequestException("An attachment's hash must be a SHA-256 in lowercase hex.")
         return Server.files().root.then("attachments/$vault/$hash")
     }
@@ -161,7 +163,7 @@ object NoteEndpoints : ServerBuilder() {
             val used = HashSet<String>()
             info.table().find(condition { (it.vault eq vault._id) and (it.attachment eq true) }).toList().mapTo(used) { it.hash }
             historyInfo.table().find(condition { (it.vault eq vault._id) and (it.attachment eq true) }).toList().mapTo(used) { it.hash }
-            val unused = Server.files().root.then("attachments/${vault._id}").list().orEmpty().filter { it.name !in used }
+            val unused = Server.files().root.then("attachments/${vault._id}").list().filter { it.name !in used }
             for (file in unused) {
                 // The local file system doesn't know when a file was written, so locally anything unused goes.
                 val modified = file.head()?.lastModified
@@ -172,7 +174,7 @@ object NoteEndpoints : ServerBuilder() {
 
     /** The SHA-256 (hex) and length of a stored file's bytes, read in pieces so a big file doesn't fill memory. */
     context(_: ServerRuntime)
-    private suspend fun hashOf(file: FileObject): Pair<String, Long>? {
+    private suspend fun hashOf(file: ExternalFile): Pair<String, Long>? {
         val data = file.get() ?: return null
         val digest = MessageDigest.getInstance("SHA-256")
         var size = 0L

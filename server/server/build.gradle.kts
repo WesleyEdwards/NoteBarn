@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.serialization)
     alias(libs.plugins.ksp)
     application
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    alias(libs.plugins.shadow)
 }
 
 
@@ -44,21 +44,20 @@ dependencies {
     implementation("org.mongodb:mongodb-driver-kotlin-coroutine:5.7.0")
 
     api(libs.kotliner.cli)
-    api(libs.comLightningKite.services.database)
-    api(libs.comLightningKite.services.database.jsonfile)
-    api(libs.comLightningKite.services.database.mongodb)
-    api(libs.comLightningKite.lightningServer.core)
-    api(libs.comLightningKite.lightningServer.typed)
-    api(libs.comLightningKite.lightningServer.files)
-    api(libs.comLightningKite.lightningServer.sessions)
-    api(libs.comLightningKite.lightningServer.sessions.email)
-    implementation(libs.comLightningKite.services.email.javasmtp)
-    implementation(libs.comLightningKite.services.files.s3)
-    implementation(libs.comLightningKite.lightningServer.engine.netty)
+    api(sa.database)
+    api(sa.database.jsonfile)
+    api(sa.database.mongodb)
+    api(ls.core)
+    api(ls.typed)
+    api(ls.files)
+    api(ls.sessions)
+    api(ls.sessions.email)
+    implementation(sa.email.javasmtp)
+    implementation(sa.files.s3)
+    implementation(ls.engine.netty)
+    implementation(ls.engine.aws.serverless)
 
-    implementation(libs.comLightningKite.lightningServer.engine.aws)
-
-    ksp(libs.comLightningKite.services.database.processor)
+    ksp(sa.database.processor)
 
     testImplementation(kotlin("test"))
 }
@@ -89,14 +88,14 @@ tasks.getByName<Zip>("distZip"){
 /** `-Psettings=settings.sandbox.json` picks another settings file than settings.json. */
 fun settingsArgs(): List<String> = (findProperty("settings") as String?)?.let { listOf("--settings", it) } ?: emptyList()
 
-tasks.create("generateSdk", JavaExec::class.java) {
+tasks.register<JavaExec>("generateSdk") {
     group = "deploy"
     classpath(sourceSets.main.get().runtimeClasspath)
     mainClass.set("com.wesleyedwards.notebarn.MainKt")
     args(settingsArgs() + "sdk")
     workingDir(project.rootDir)
 }
-tasks.create("serve", JavaExec::class.java) {
+tasks.register<JavaExec>("serve") {
     group = "application"
     classpath(sourceSets.main.get().runtimeClasspath)
     mainClass.set("com.wesleyedwards.notebarn.MainKt")
@@ -106,7 +105,7 @@ tasks.create("serve", JavaExec::class.java) {
 
 tasks.register<Sync>("lambda") {
     group = "deploy"
-    this.destinationDir = project.buildDir.resolve("dist/lambda")
+    destinationDir = layout.buildDirectory.dir("dist/lambda").get().asFile
     val jarTask = tasks.getByName("jar")
     dependsOn(jarTask)
     val output = jarTask.outputs.files.find { it.extension == "jar" }!!

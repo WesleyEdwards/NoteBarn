@@ -15,6 +15,7 @@ import com.wesleyedwards.notebarn.data.NoteEndpoints.info
 
 object VaultEndpoints : ServerBuilder() {
     private val info: ModelInfo<User, Vault, Vault.ID> = Server.database.modelInfo(
+        tableName = "Vault",
         auth = UserAuth.require(),
         permissions = {
             ownerPerms<Vault>({ it.owner }).copy(
@@ -46,7 +47,7 @@ object VaultEndpoints : ServerBuilder() {
         ShareEndpoints.vaultDeleted(vault)
         // And the attachments' bytes. Best effort: leftover files only cost storage.
         try {
-            Server.files().root.then("attachments/$vault").list()?.forEach { it.delete() }
+            Server.files().root.then("attachments/$vault").list().forEach { it.delete() }
         } catch (e: Exception) {
             e.printStackTrace()
         }

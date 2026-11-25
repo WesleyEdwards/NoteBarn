@@ -63,7 +63,7 @@ object Backups {
         val root = Server.backups().root
         root.then("$today.json.gz").put(TypedData.bytes(out.toByteArray(), MediaType.Application.OctetStream))
         // Claude: names are ISO dates, so sorting by name sorts by age.
-        root.list()?.sortedByDescending { it.name }?.drop(KEEP)?.forEach { it.delete() }
+        root.list().sortedByDescending { it.name }.drop(KEEP).forEach { it.delete() }
     }
 
     /**

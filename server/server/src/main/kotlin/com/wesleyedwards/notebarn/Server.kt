@@ -27,8 +27,8 @@ import com.lightningkite.services.database.mongodb.MongoDatabase
 import com.lightningkite.services.database.validation.AnnotationValidators
 import com.lightningkite.services.email.EmailService
 import com.lightningkite.services.email.javasmtp.JavaSmtpEmailService
-import com.lightningkite.services.files.PublicFileSystem
-import com.lightningkite.services.files.s3.S3PublicFileSystem
+import com.lightningkite.services.files.ExternalFileSystem
+import com.lightningkite.services.files.s3.S3ExternalFileSystem
 import com.wesleyedwards.notebarn.UserAuth.RoleCache.userRole
 import com.wesleyedwards.notebarn.data.*
 
@@ -42,10 +42,10 @@ object Server : ServerBuilder() {
     val database = setting("database", Database.Settings())
     val email = setting("email", EmailService.Settings())
     val cors = setting("cors", CorsSettings())
-    val files = setting("files", PublicFileSystem.Settings())
+    val files = setting("files", ExternalFileSystem.Settings())
 
     /** Where [Backups] puts the nightly database backups. Nothing serves these; keep them private. */
-    val backups = setting("backups", PublicFileSystem.Settings("file://local/backups?serveUrl=backups"), optional = true)
+    val backups = setting("backups", ExternalFileSystem.Settings("file://local/backups?serveUrl=backups"), optional = true)
 
     /**
      * Who may log in. "*" lets anyone in, which is only meant for local development: everyone who logs in gets their
@@ -66,7 +66,7 @@ object Server : ServerBuilder() {
         MongoDatabase
         JsonFileDatabase
         JavaSmtpEmailService
-        S3PublicFileSystem
+        S3ExternalFileSystem
         DynamoDbCache
 
         AuthRequirement.IsSuperUser set UserAuth.require { it.userRole() >= UserRole.Root }

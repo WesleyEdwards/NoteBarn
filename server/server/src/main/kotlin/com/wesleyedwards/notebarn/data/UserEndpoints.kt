@@ -13,6 +13,7 @@ import com.lightningkite.lightningserver.typed.ModelInfo
 
 object UserEndpoints : ServerBuilder() {
     private val info: ModelInfo<User, User, User.ID> = Server.database.modelInfo(
+        tableName = "User",
         auth = UserAuth.require(),
         permissions = {
             val self = condition<User> { it._id eq auth.id }

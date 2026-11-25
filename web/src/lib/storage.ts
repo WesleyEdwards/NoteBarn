@@ -23,6 +23,20 @@ export const storage = {
     } catch {
       // Blocked.
     }
+  },
+  keys(): string[] {
+    try {
+      return Object.keys(localStorage)
+    } catch {
+      return []
+    }
+  },
+  clear() {
+    try {
+      localStorage.clear()
+    } catch {
+      // Blocked.
+    }
   }
 }
 

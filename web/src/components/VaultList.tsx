@@ -2,7 +2,7 @@ import {useEffect, useState} from "react"
 import {Link, Navigate, useNavigate} from "react-router-dom"
 import type {Api, User, Vault} from "@notebarn/shared/api"
 import {errorMessage} from "../api/client"
-import {storage} from "../lib/storage"
+import {storage, usePersistentState} from "../lib/storage"
 import {useDialogs} from "./Dialog"
 import {PopupMenu, type MenuAnchor} from "./Menu"
 import {useToast} from "./Toast"
@@ -14,7 +14,8 @@ export function VaultList({api, user, signOut, pick}: {api: Api; user: User; sig
   const navigate = useNavigate()
   const dialogs = useDialogs()
   const toast = useToast()
-  const [vaults, setVaults] = useState<Vault[] | null>(null)
+  // Claude: Cached so the list shows instantly; the fetch below refreshes it.
+  const [vaults, setVaults] = usePersistentState<Vault[] | null>("vaults", null)
   const [error, setError] = useState<string | null>(null)
   const [menu, setMenu] = useState<{vault: Vault; anchor: MenuAnchor} | null>(null)
   const last = storage.get<string | null>("last-vault", null)

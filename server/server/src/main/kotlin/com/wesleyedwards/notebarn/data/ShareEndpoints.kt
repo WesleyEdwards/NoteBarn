@@ -26,6 +26,7 @@ import java.net.URLDecoder
  */
 object ShareEndpoints : ServerBuilder() {
     private val info: ModelInfo<User, Share, Share.ID> = Server.database.modelInfo(
+        tableName = "Share",
         auth = UserAuth.require(),
         permissions = {
             ModelPermissions(

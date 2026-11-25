@@ -68,7 +68,7 @@ export interface DeleteNote {
 	baseVersion: number | null | undefined
 }
 
-export type EmailAddress = string  // com.lightningkite.services.data.EmailAddress
+export type EmailAddress = Brand<string, "EmailAddress">
 
 export interface FinishProof {
 	key: string
@@ -245,6 +245,11 @@ export interface RestoreVersion {
 	baseVersion: number | null | undefined
 }
 
+export interface ScoredResult<T> {
+	model: T
+	score: number
+}
+
 export interface SearchHit {
 	path: string
 	snippet: string | null | undefined
@@ -281,6 +286,7 @@ export interface Session<T, T1> {
 	label: string | null | undefined
 	subjectId: T1
 	createdAt: Instant
+	authenticatedAt: Instant | null | undefined
 	lastUsed: Instant
 	expires: Instant | null | undefined
 	stale: Instant | null | undefined
@@ -325,6 +331,13 @@ export interface SubSessionRequest {
 	scopes: Array<GrantedScope>
 	oauthClient: string | null | undefined
 	expires: Instant | null | undefined
+}
+
+export interface TextIndexQuery<T> {
+	query: string
+	condition: Condition<T>
+	skip: number
+	limit: number
 }
 
 export interface UpdateRestrictions<T> {
@@ -406,19 +419,21 @@ export interface Api {
 	readonly user: {
 		list(input: Query<User>): Promise<Array<User>>
 		insert(input: User): Promise<User>
-		permissions(): Promise<ModelPermissions<User>>
 		queryPartial(input: QueryPartial<User>): Promise<Array<Partial<User>>>
-		groupAggregate2(input: GroupAggregateQuery<User>): Promise<Record<string, number | null | undefined>>
 		groupAggregate(input: GroupAggregateQuery<User>): Promise<Record<string, number | null | undefined>>
 		query(input: Query<User>): Promise<Array<User>>
+		textQuery(input: TextIndexQuery<User>): Promise<Array<ScoredResult<User>>>
 		count(input: Condition<User>): Promise<number>
+		groupCount2(input: GroupCountQuery<User>): Promise<Record<string, number>>
+		aggregate(input: AggregateQuery<User>): Promise<number | null | undefined>
+		default(): Promise<User>
+		permissions(): Promise<ModelPermissions<User>>
+		groupAggregate2(input: GroupAggregateQuery<User>): Promise<Record<string, number | null | undefined>>
 		groupCount(input: GroupCountQuery<User>): Promise<Record<string, number>>
 		insertBulk(input: Array<User>): Promise<Array<User>>
 		bulkReplace(input: Array<User>): Promise<Array<User>>
 		bulkModify(input: MassModification<User>): Promise<number>
-		groupCount2(input: GroupCountQuery<User>): Promise<Record<string, number>>
 		bulkDelete(input: Condition<User>): Promise<number>
-		aggregate(input: AggregateQuery<User>): Promise<number | null | undefined>
 		detail(id: User.ID): Promise<User>
 		upsert(id: User.ID, input: User): Promise<User>
 		replace(id: User.ID, input: User): Promise<User>
@@ -432,19 +447,21 @@ export interface Api {
 		beginEmailOwnershipProof(input: string): Promise<string>
 		list(input: Query<Session<User, User.ID>>): Promise<Array<Session<User, User.ID>>>
 		insert(input: Session<User, User.ID>): Promise<Session<User, User.ID>>
-		permissions(): Promise<ModelPermissions<Session<User, User.ID>>>
 		queryPartial(input: QueryPartial<Session<User, User.ID>>): Promise<Array<Partial<Session<User, User.ID>>>>
-		groupAggregate2(input: GroupAggregateQuery<Session<User, User.ID>>): Promise<Record<string, number | null | undefined>>
 		groupAggregate(input: GroupAggregateQuery<Session<User, User.ID>>): Promise<Record<string, number | null | undefined>>
 		query(input: Query<Session<User, User.ID>>): Promise<Array<Session<User, User.ID>>>
+		textQuery(input: TextIndexQuery<Session<User, User.ID>>): Promise<Array<ScoredResult<Session<User, User.ID>>>>
 		count(input: Condition<Session<User, User.ID>>): Promise<number>
+		groupCount2(input: GroupCountQuery<Session<User, User.ID>>): Promise<Record<string, number>>
+		aggregate(input: AggregateQuery<Session<User, User.ID>>): Promise<number | null | undefined>
+		default(): Promise<Session<User, User.ID>>
+		permissions(): Promise<ModelPermissions<Session<User, User.ID>>>
+		groupAggregate2(input: GroupAggregateQuery<Session<User, User.ID>>): Promise<Record<string, number | null | undefined>>
 		groupCount(input: GroupCountQuery<Session<User, User.ID>>): Promise<Record<string, number>>
 		insertBulk(input: Array<Session<User, User.ID>>): Promise<Array<Session<User, User.ID>>>
 		bulkReplace(input: Array<Session<User, User.ID>>): Promise<Array<Session<User, User.ID>>>
 		bulkModify(input: MassModification<Session<User, User.ID>>): Promise<number>
-		groupCount2(input: GroupCountQuery<Session<User, User.ID>>): Promise<Record<string, number>>
 		bulkDelete(input: Condition<Session<User, User.ID>>): Promise<number>
-		aggregate(input: AggregateQuery<Session<User, User.ID>>): Promise<number | null | undefined>
 		detail(id: Uuid): Promise<Session<User, User.ID>>
 		upsert(id: Uuid, input: Session<User, User.ID>): Promise<Session<User, User.ID>>
 		replace(id: Uuid, input: Session<User, User.ID>): Promise<Session<User, User.ID>>
@@ -453,31 +470,33 @@ export interface Api {
 		simplifiedModify(id: Uuid, input: Partial<Session<User, User.ID>>): Promise<Session<User, User.ID>>
 		modifyWithDiff(id: Uuid, input: Modification<Session<User, User.ID>>): Promise<EntryChange<Session<User, User.ID>>>
 		getSelf(): Promise<User>
-		terminateCurrentSession(): Promise<void>
+		terminateSession(): Promise<void>
 		logIn(input: Array<Proof>): Promise<IdAndAuthMethods<User.ID>>
 		checkProofs(input: Array<Proof>): Promise<ProofsCheckResult<User.ID>>
-		createSubSession(input: SubSessionRequest): Promise<string>
-		authenticationRequirements(): Promise<AuthRequirements>
-		logInWithLimitations(input: LogInRequest): Promise<IdAndAuthMethods<User.ID>>
+		subsession(input: SubSessionRequest): Promise<string>
+		authRequirements(): Promise<AuthRequirements>
+		logInV2(input: LogInRequest): Promise<IdAndAuthMethods<User.ID>>
 		getTokenSimple(input: string): Promise<string>
 		terminateSession(sessionId: Uuid): Promise<void>
 	}
 	readonly vault: {
 		list(input: Query<Vault>): Promise<Array<Vault>>
 		insert(input: Vault): Promise<Vault>
-		permissions(): Promise<ModelPermissions<Vault>>
 		queryPartial(input: QueryPartial<Vault>): Promise<Array<Partial<Vault>>>
-		groupAggregate2(input: GroupAggregateQuery<Vault>): Promise<Record<string, number | null | undefined>>
 		groupAggregate(input: GroupAggregateQuery<Vault>): Promise<Record<string, number | null | undefined>>
 		query(input: Query<Vault>): Promise<Array<Vault>>
+		textQuery(input: TextIndexQuery<Vault>): Promise<Array<ScoredResult<Vault>>>
 		count(input: Condition<Vault>): Promise<number>
+		groupCount2(input: GroupCountQuery<Vault>): Promise<Record<string, number>>
+		aggregate(input: AggregateQuery<Vault>): Promise<number | null | undefined>
+		default(): Promise<Vault>
+		permissions(): Promise<ModelPermissions<Vault>>
+		groupAggregate2(input: GroupAggregateQuery<Vault>): Promise<Record<string, number | null | undefined>>
 		groupCount(input: GroupCountQuery<Vault>): Promise<Record<string, number>>
 		insertBulk(input: Array<Vault>): Promise<Array<Vault>>
 		bulkReplace(input: Array<Vault>): Promise<Array<Vault>>
 		bulkModify(input: MassModification<Vault>): Promise<number>
-		groupCount2(input: GroupCountQuery<Vault>): Promise<Record<string, number>>
 		bulkDelete(input: Condition<Vault>): Promise<number>
-		aggregate(input: AggregateQuery<Vault>): Promise<number | null | undefined>
 		detail(id: Vault.ID): Promise<Vault>
 		upsert(id: Vault.ID, input: Vault): Promise<Vault>
 		replace(id: Vault.ID, input: Vault): Promise<Vault>
@@ -503,19 +522,21 @@ export interface Api {
 		writeNote(input: WriteNote): Promise<WriteResult>
 		list(input: Query<Note>): Promise<Array<Note>>
 		insert(input: Note): Promise<Note>
-		permissions(): Promise<ModelPermissions<Note>>
 		queryPartial(input: QueryPartial<Note>): Promise<Array<Partial<Note>>>
-		groupAggregate2(input: GroupAggregateQuery<Note>): Promise<Record<string, number | null | undefined>>
 		groupAggregate(input: GroupAggregateQuery<Note>): Promise<Record<string, number | null | undefined>>
 		query(input: Query<Note>): Promise<Array<Note>>
+		textQuery(input: TextIndexQuery<Note>): Promise<Array<ScoredResult<Note>>>
 		count(input: Condition<Note>): Promise<number>
+		groupCount2(input: GroupCountQuery<Note>): Promise<Record<string, number>>
+		aggregate(input: AggregateQuery<Note>): Promise<number | null | undefined>
+		default(): Promise<Note>
+		permissions(): Promise<ModelPermissions<Note>>
+		groupAggregate2(input: GroupAggregateQuery<Note>): Promise<Record<string, number | null | undefined>>
 		groupCount(input: GroupCountQuery<Note>): Promise<Record<string, number>>
 		insertBulk(input: Array<Note>): Promise<Array<Note>>
 		bulkReplace(input: Array<Note>): Promise<Array<Note>>
 		bulkModify(input: MassModification<Note>): Promise<number>
-		groupCount2(input: GroupCountQuery<Note>): Promise<Record<string, number>>
 		bulkDelete(input: Condition<Note>): Promise<number>
-		aggregate(input: AggregateQuery<Note>): Promise<number | null | undefined>
 		detail(id: Note.ID): Promise<Note>
 		upsert(id: Note.ID, input: Note): Promise<Note>
 		replace(id: Note.ID, input: Note): Promise<Note>
@@ -525,24 +546,26 @@ export interface Api {
 		modifyWithDiff(id: Note.ID, input: Modification<Note>): Promise<EntryChange<Note>>
 	}
 	readonly share: {
-		viewSharedNote(input: Share.ID): Promise<SharedNote>
+		viewSharedNote(input: string): Promise<SharedNote>
 		stopSharing(input: ShareNote): Promise<void>
 		shareNote(input: ShareNote): Promise<Share>
 		list(input: Query<Share>): Promise<Array<Share>>
 		insert(input: Share): Promise<Share>
-		permissions(): Promise<ModelPermissions<Share>>
 		queryPartial(input: QueryPartial<Share>): Promise<Array<Partial<Share>>>
-		groupAggregate2(input: GroupAggregateQuery<Share>): Promise<Record<string, number | null | undefined>>
 		groupAggregate(input: GroupAggregateQuery<Share>): Promise<Record<string, number | null | undefined>>
 		query(input: Query<Share>): Promise<Array<Share>>
+		textQuery(input: TextIndexQuery<Share>): Promise<Array<ScoredResult<Share>>>
 		count(input: Condition<Share>): Promise<number>
+		groupCount2(input: GroupCountQuery<Share>): Promise<Record<string, number>>
+		aggregate(input: AggregateQuery<Share>): Promise<number | null | undefined>
+		default(): Promise<Share>
+		permissions(): Promise<ModelPermissions<Share>>
+		groupAggregate2(input: GroupAggregateQuery<Share>): Promise<Record<string, number | null | undefined>>
 		groupCount(input: GroupCountQuery<Share>): Promise<Record<string, number>>
 		insertBulk(input: Array<Share>): Promise<Array<Share>>
 		bulkReplace(input: Array<Share>): Promise<Array<Share>>
 		bulkModify(input: MassModification<Share>): Promise<number>
-		groupCount2(input: GroupCountQuery<Share>): Promise<Record<string, number>>
 		bulkDelete(input: Condition<Share>): Promise<number>
-		aggregate(input: AggregateQuery<Share>): Promise<number | null | undefined>
 		detail(id: Share.ID): Promise<Share>
 		upsert(id: Share.ID, input: Share): Promise<Share>
 		replace(id: Share.ID, input: Share): Promise<Share>
@@ -574,19 +597,21 @@ export class LiveApi implements Api {
 	readonly user: Api["user"] = {
 		list: (input) => this.fetcher(`/users`, "GET", input),
 		insert: (input) => this.fetcher(`/users`, "POST", input),
-		permissions: () => this.fetcher(`/users/_permissions_`, "GET", undefined),
 		queryPartial: (input) => this.fetcher(`/users/query-partial`, "POST", input),
-		groupAggregate2: (input) => this.fetcher(`/users/group-aggregate-2`, "POST", input),
 		groupAggregate: (input) => this.fetcher(`/users/group-aggregate`, "POST", input),
 		query: (input) => this.fetcher(`/users/query`, "POST", input),
+		textQuery: (input) => this.fetcher(`/users/text-query`, "POST", input),
 		count: (input) => this.fetcher(`/users/count`, "POST", input),
+		groupCount2: (input) => this.fetcher(`/users/group-count-2`, "POST", input),
+		aggregate: (input) => this.fetcher(`/users/aggregate`, "POST", input),
+		default: () => this.fetcher(`/users/_default_`, "GET", undefined),
+		permissions: () => this.fetcher(`/users/_permissions_`, "GET", undefined),
+		groupAggregate2: (input) => this.fetcher(`/users/group-aggregate-2`, "POST", input),
 		groupCount: (input) => this.fetcher(`/users/group-count`, "POST", input),
 		insertBulk: (input) => this.fetcher(`/users/bulk`, "POST", input),
 		bulkReplace: (input) => this.fetcher(`/users/bulk`, "PUT", input),
 		bulkModify: (input) => this.fetcher(`/users/bulk`, "PATCH", input),
-		groupCount2: (input) => this.fetcher(`/users/group-count-2`, "POST", input),
 		bulkDelete: (input) => this.fetcher(`/users/bulk-delete`, "POST", input),
-		aggregate: (input) => this.fetcher(`/users/aggregate`, "POST", input),
 		detail: (id) => this.fetcher(`/users/${id}`, "GET", undefined),
 		upsert: (id, input) => this.fetcher(`/users/${id}`, "POST", input),
 		replace: (id, input) => this.fetcher(`/users/${id}`, "PUT", input),
@@ -600,19 +625,21 @@ export class LiveApi implements Api {
 		beginEmailOwnershipProof: (input) => this.fetcher(`/auth/proof/email/start`, "POST", input),
 		list: (input) => this.fetcher(`/auth/session/sessions`, "GET", input),
 		insert: (input) => this.fetcher(`/auth/session/sessions`, "POST", input),
-		permissions: () => this.fetcher(`/auth/session/sessions/_permissions_`, "GET", undefined),
 		queryPartial: (input) => this.fetcher(`/auth/session/sessions/query-partial`, "POST", input),
-		groupAggregate2: (input) => this.fetcher(`/auth/session/sessions/group-aggregate-2`, "POST", input),
 		groupAggregate: (input) => this.fetcher(`/auth/session/sessions/group-aggregate`, "POST", input),
 		query: (input) => this.fetcher(`/auth/session/sessions/query`, "POST", input),
+		textQuery: (input) => this.fetcher(`/auth/session/sessions/text-query`, "POST", input),
 		count: (input) => this.fetcher(`/auth/session/sessions/count`, "POST", input),
+		groupCount2: (input) => this.fetcher(`/auth/session/sessions/group-count-2`, "POST", input),
+		aggregate: (input) => this.fetcher(`/auth/session/sessions/aggregate`, "POST", input),
+		default: () => this.fetcher(`/auth/session/sessions/_default_`, "GET", undefined),
+		permissions: () => this.fetcher(`/auth/session/sessions/_permissions_`, "GET", undefined),
+		groupAggregate2: (input) => this.fetcher(`/auth/session/sessions/group-aggregate-2`, "POST", input),
 		groupCount: (input) => this.fetcher(`/auth/session/sessions/group-count`, "POST", input),
 		insertBulk: (input) => this.fetcher(`/auth/session/sessions/bulk`, "POST", input),
 		bulkReplace: (input) => this.fetcher(`/auth/session/sessions/bulk`, "PUT", input),
 		bulkModify: (input) => this.fetcher(`/auth/session/sessions/bulk`, "PATCH", input),
-		groupCount2: (input) => this.fetcher(`/auth/session/sessions/group-count-2`, "POST", input),
 		bulkDelete: (input) => this.fetcher(`/auth/session/sessions/bulk-delete`, "POST", input),
-		aggregate: (input) => this.fetcher(`/auth/session/sessions/aggregate`, "POST", input),
 		detail: (id) => this.fetcher(`/auth/session/sessions/${id}`, "GET", undefined),
 		upsert: (id, input) => this.fetcher(`/auth/session/sessions/${id}`, "POST", input),
 		replace: (id, input) => this.fetcher(`/auth/session/sessions/${id}`, "PUT", input),
@@ -621,31 +648,33 @@ export class LiveApi implements Api {
 		simplifiedModify: (id, input) => this.fetcher(`/auth/session/sessions/${id}/simplified`, "PATCH", input),
 		modifyWithDiff: (id, input) => this.fetcher(`/auth/session/sessions/${id}/delta`, "PATCH", input),
 		getSelf: () => this.fetcher(`/auth/session/self`, "GET", undefined),
-		terminateCurrentSession: () => this.fetcher(`/auth/session/terminate`, "POST", undefined),
+		terminateSession: () => this.fetcher(`/auth/session/terminate`, "POST", undefined),
 		logIn: (input) => this.fetcher(`/auth/session/login`, "POST", input),
 		checkProofs: (input) => this.fetcher(`/auth/session/proofs-check`, "POST", input),
-		createSubSession: (input) => this.fetcher(`/auth/session/sub-session`, "POST", input),
-		authenticationRequirements: () => this.fetcher(`/auth/session/auth-requirements`, "GET", undefined),
-		logInWithLimitations: (input) => this.fetcher(`/auth/session/login2`, "POST", input),
+		subsession: (input) => this.fetcher(`/auth/session/sub-session`, "POST", input),
+		authRequirements: () => this.fetcher(`/auth/session/auth-requirements`, "GET", undefined),
+		logInV2: (input) => this.fetcher(`/auth/session/login2`, "POST", input),
 		getTokenSimple: (input) => this.fetcher(`/auth/session/token/simple`, "POST", input),
 		terminateSession: (sessionId) => this.fetcher(`/auth/session/${sessionId}/terminate`, "POST", undefined),
 	}
 	readonly vault: Api["vault"] = {
 		list: (input) => this.fetcher(`/vault`, "GET", input),
 		insert: (input) => this.fetcher(`/vault`, "POST", input),
-		permissions: () => this.fetcher(`/vault/_permissions_`, "GET", undefined),
 		queryPartial: (input) => this.fetcher(`/vault/query-partial`, "POST", input),
-		groupAggregate2: (input) => this.fetcher(`/vault/group-aggregate-2`, "POST", input),
 		groupAggregate: (input) => this.fetcher(`/vault/group-aggregate`, "POST", input),
 		query: (input) => this.fetcher(`/vault/query`, "POST", input),
+		textQuery: (input) => this.fetcher(`/vault/text-query`, "POST", input),
 		count: (input) => this.fetcher(`/vault/count`, "POST", input),
+		groupCount2: (input) => this.fetcher(`/vault/group-count-2`, "POST", input),
+		aggregate: (input) => this.fetcher(`/vault/aggregate`, "POST", input),
+		default: () => this.fetcher(`/vault/_default_`, "GET", undefined),
+		permissions: () => this.fetcher(`/vault/_permissions_`, "GET", undefined),
+		groupAggregate2: (input) => this.fetcher(`/vault/group-aggregate-2`, "POST", input),
 		groupCount: (input) => this.fetcher(`/vault/group-count`, "POST", input),
 		insertBulk: (input) => this.fetcher(`/vault/bulk`, "POST", input),
 		bulkReplace: (input) => this.fetcher(`/vault/bulk`, "PUT", input),
 		bulkModify: (input) => this.fetcher(`/vault/bulk`, "PATCH", input),
-		groupCount2: (input) => this.fetcher(`/vault/group-count-2`, "POST", input),
 		bulkDelete: (input) => this.fetcher(`/vault/bulk-delete`, "POST", input),
-		aggregate: (input) => this.fetcher(`/vault/aggregate`, "POST", input),
 		detail: (id) => this.fetcher(`/vault/${id}`, "GET", undefined),
 		upsert: (id, input) => this.fetcher(`/vault/${id}`, "POST", input),
 		replace: (id, input) => this.fetcher(`/vault/${id}`, "PUT", input),
@@ -671,19 +700,21 @@ export class LiveApi implements Api {
 		writeNote: (input) => this.fetcher(`/note/write`, "POST", input),
 		list: (input) => this.fetcher(`/note`, "GET", input),
 		insert: (input) => this.fetcher(`/note`, "POST", input),
-		permissions: () => this.fetcher(`/note/_permissions_`, "GET", undefined),
 		queryPartial: (input) => this.fetcher(`/note/query-partial`, "POST", input),
-		groupAggregate2: (input) => this.fetcher(`/note/group-aggregate-2`, "POST", input),
 		groupAggregate: (input) => this.fetcher(`/note/group-aggregate`, "POST", input),
 		query: (input) => this.fetcher(`/note/query`, "POST", input),
+		textQuery: (input) => this.fetcher(`/note/text-query`, "POST", input),
 		count: (input) => this.fetcher(`/note/count`, "POST", input),
+		groupCount2: (input) => this.fetcher(`/note/group-count-2`, "POST", input),
+		aggregate: (input) => this.fetcher(`/note/aggregate`, "POST", input),
+		default: () => this.fetcher(`/note/_default_`, "GET", undefined),
+		permissions: () => this.fetcher(`/note/_permissions_`, "GET", undefined),
+		groupAggregate2: (input) => this.fetcher(`/note/group-aggregate-2`, "POST", input),
 		groupCount: (input) => this.fetcher(`/note/group-count`, "POST", input),
 		insertBulk: (input) => this.fetcher(`/note/bulk`, "POST", input),
 		bulkReplace: (input) => this.fetcher(`/note/bulk`, "PUT", input),
 		bulkModify: (input) => this.fetcher(`/note/bulk`, "PATCH", input),
-		groupCount2: (input) => this.fetcher(`/note/group-count-2`, "POST", input),
 		bulkDelete: (input) => this.fetcher(`/note/bulk-delete`, "POST", input),
-		aggregate: (input) => this.fetcher(`/note/aggregate`, "POST", input),
 		detail: (id) => this.fetcher(`/note/${id}`, "GET", undefined),
 		upsert: (id, input) => this.fetcher(`/note/${id}`, "POST", input),
 		replace: (id, input) => this.fetcher(`/note/${id}`, "PUT", input),
@@ -698,19 +729,21 @@ export class LiveApi implements Api {
 		shareNote: (input) => this.fetcher(`/share/create`, "POST", input),
 		list: (input) => this.fetcher(`/share`, "GET", input),
 		insert: (input) => this.fetcher(`/share`, "POST", input),
-		permissions: () => this.fetcher(`/share/_permissions_`, "GET", undefined),
 		queryPartial: (input) => this.fetcher(`/share/query-partial`, "POST", input),
-		groupAggregate2: (input) => this.fetcher(`/share/group-aggregate-2`, "POST", input),
 		groupAggregate: (input) => this.fetcher(`/share/group-aggregate`, "POST", input),
 		query: (input) => this.fetcher(`/share/query`, "POST", input),
+		textQuery: (input) => this.fetcher(`/share/text-query`, "POST", input),
 		count: (input) => this.fetcher(`/share/count`, "POST", input),
+		groupCount2: (input) => this.fetcher(`/share/group-count-2`, "POST", input),
+		aggregate: (input) => this.fetcher(`/share/aggregate`, "POST", input),
+		default: () => this.fetcher(`/share/_default_`, "GET", undefined),
+		permissions: () => this.fetcher(`/share/_permissions_`, "GET", undefined),
+		groupAggregate2: (input) => this.fetcher(`/share/group-aggregate-2`, "POST", input),
 		groupCount: (input) => this.fetcher(`/share/group-count`, "POST", input),
 		insertBulk: (input) => this.fetcher(`/share/bulk`, "POST", input),
 		bulkReplace: (input) => this.fetcher(`/share/bulk`, "PUT", input),
 		bulkModify: (input) => this.fetcher(`/share/bulk`, "PATCH", input),
-		groupCount2: (input) => this.fetcher(`/share/group-count-2`, "POST", input),
 		bulkDelete: (input) => this.fetcher(`/share/bulk-delete`, "POST", input),
-		aggregate: (input) => this.fetcher(`/share/aggregate`, "POST", input),
 		detail: (id) => this.fetcher(`/share/${id}`, "GET", undefined),
 		upsert: (id, input) => this.fetcher(`/share/${id}`, "POST", input),
 		replace: (id, input) => this.fetcher(`/share/${id}`, "PUT", input),
