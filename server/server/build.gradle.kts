@@ -38,10 +38,8 @@ dependencies {
     // AWS SDK's Apache HTTP client uses this at runtime, but its transitive
     // dependency is not present in the resolved classpath.
     implementation("commons-logging:commons-logging:1.3.5")
-    // For some reason, libraries are pulling in different versions of netty
-    implementation(enforcedPlatform("io.netty:netty-bom:4.1.100.Final"))
     // For AdminEndpoints' dbStats. database-mongodb uses it without exposing it; keep the version it uses.
-    implementation("org.mongodb:mongodb-driver-kotlin-coroutine:5.7.0")
+    implementation("org.mongodb:mongodb-driver-kotlin-coroutine:5.12.0")
 
     api(libs.kotliner.cli)
     api(sa.database)
