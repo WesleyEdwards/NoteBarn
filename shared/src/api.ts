@@ -477,7 +477,7 @@ export interface Api {
 		authRequirements(): Promise<AuthRequirements>
 		logInV2(input: LogInRequest): Promise<IdAndAuthMethods<User.ID>>
 		getTokenSimple(input: string): Promise<string>
-		terminateSession(sessionId: Uuid): Promise<void>
+		terminateSession2(sessionId: Uuid): Promise<void>
 	}
 	readonly vault: {
 		list(input: Query<Vault>): Promise<Array<Vault>>
@@ -655,7 +655,7 @@ export class LiveApi implements Api {
 		authRequirements: () => this.fetcher(`/auth/session/auth-requirements`, "GET", undefined),
 		logInV2: (input) => this.fetcher(`/auth/session/login2`, "POST", input),
 		getTokenSimple: (input) => this.fetcher(`/auth/session/token/simple`, "POST", input),
-		terminateSession: (sessionId) => this.fetcher(`/auth/session/${sessionId}/terminate`, "POST", undefined),
+		terminateSession2: (sessionId) => this.fetcher(`/auth/session/${sessionId}/terminate`, "POST", undefined),
 	}
 	readonly vault: Api["vault"] = {
 		list: (input) => this.fetcher(`/vault`, "GET", input),
