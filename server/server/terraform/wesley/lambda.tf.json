@@ -3,8 +3,7 @@
         "archive_file": {
             "lambda": {
                 "depends_on": [
-                    "null_resource.lambda_jar_source",
-                    "null_resource.settings_reread"
+                    "null_resource.lambda_jar_source"
                 ],
                 "output_path": "${path.module}/build/lambda.jar",
                 "type": "zip",
@@ -16,12 +15,6 @@
         }
     },
     "resource": {
-        "local_sensitive_file": {
-            "settings_raw": {
-                "filename": "${path.module}/build/raw-settings.json",
-                "content": "${jsonencode(local.settings_raw)}"
-            }
-        },
         "aws_iam_role_policy_attachment": {
             "insights_policy": {
                 "policy_arn": "arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy",
@@ -37,23 +30,6 @@
             }
         },
         "null_resource": {
-            "settings_reread": {
-                "provisioner": {
-                    "local-exec": {
-                        "environment": {
-                            "SETTINGS_PASS": "${random_password.settings.result}"
-                        },
-                        "interpreter": "${local.is_windows ? [\"PowerShell\", \"-Command\"] : []}",
-                        "command": "openssl enc -d -aes-256-cbc -md sha256 -out \"${local_sensitive_file.settings_raw.filename}.decrypted.json\" -in \"${path.module}/build/lambda/settings.enc\" -pass env:SETTINGS_PASS"
-                    }
-                },
-                "depends_on": [
-                    "null_resource.lambda_jar_source"
-                ],
-                "triggers": {
-                    "settingsRawHash": "${local_sensitive_file.settings_raw.content_sha256}"
-                }
-            },
             "lambda_jar_source": {
                 "provisioner": {
                     "local-exec": [
@@ -67,16 +43,38 @@
                         },
                         {
                             "environment": {
-                                "SETTINGS_PASS": "${random_password.settings.result}"
+                                "SETTINGS_PASS": "${random_password.settings.result}",
+                                "SETTINGS_JSON": "${jsonencode(local.settings_raw)}"
                             },
                             "interpreter": "${local.is_windows ? [\"PowerShell\", \"-Command\"] : []}",
-                            "command": "openssl enc -aes-256-cbc -md sha256 -in \"${local_sensitive_file.settings_raw.filename}\" -out \"${path.module}/build/lambda/settings.enc\" -pass env:SETTINGS_PASS"
+                            "command": "${local.is_windows ? \"$OutputEncoding = New-Object System.Text.UTF8Encoding $false; $env:SETTINGS_JSON | openssl enc -aes-256-cbc -md sha256 -out \\\"${path.module}/build/lambda/settings.enc\\\" -pass env:SETTINGS_PASS\" : \"printf '%s' \\\"$SETTINGS_JSON\\\" | openssl enc -aes-256-cbc -md sha256 -out \\\"${path.module}/build/lambda/settings.enc\\\" -pass env:SETTINGS_PASS\"}"
                         }
                     ]
                 },
                 "triggers": {
+                    "packageMarker": "${local_file.lambda_package_marker.id}",
                     "buildHash": "${sha256(join(\"\", [for f in fileset(\"${path.module}/../../build/dist/lambda\", \"**\") : filesha256(\"${path.module}/../../build/dist/lambda/${f}\")]))}",
-                    "settingsHash": "${local_sensitive_file.settings_raw.content_sha256}"
+                    "settingsHash": "${sha256(jsonencode(local.settings_raw))}"
+                }
+            },
+            "predeploy": {
+                "provisioner": {
+                    "local-exec": [
+                        {
+                            "interpreter": "${local.is_windows ? [\"PowerShell\", \"-Command\"] : []}",
+                            "command": "aws lambda wait function-active --function-name ${aws_lambda_function.main.function_name} --qualifier '${aws_lambda_function.main.version}' --region us-west-2"
+                        },
+                        {
+                            "interpreter": "${local.is_windows ? [\"PowerShell\", \"-Command\"] : []}",
+                            "command": "${local.is_windows ? \"aws lambda invoke --function-name ${aws_lambda_function.main.function_name} --qualifier '${aws_lambda_function.main.version}' --cli-binary-format base64 --payload eyJwcmVkZXBsb3kiOnRydWV9 --region us-west-2 ${path.module}/build/predeploy-out.json | Out-Null; if(-not(Select-String -Path ${path.module}/build/predeploy-out.json -Pattern predeploy-ok -Quiet)){exit 1}\" : \"aws lambda invoke --function-name ${aws_lambda_function.main.function_name} --qualifier '${aws_lambda_function.main.version}' --cli-binary-format base64 --payload eyJwcmVkZXBsb3kiOnRydWV9 --region us-west-2 ${path.module}/build/predeploy-out.json > /dev/null && grep -q predeploy-ok ${path.module}/build/predeploy-out.json\"}"
+                        }
+                    ]
+                },
+                "depends_on": [
+                    "aws_lambda_function.main"
+                ],
+                "triggers": {
+                    "code": "${aws_lambda_function.main.source_code_hash}"
                 }
             }
         },
@@ -108,6 +106,9 @@
         },
         "aws_lambda_alias": {
             "main": {
+                "depends_on": [
+                    "null_resource.predeploy"
+                ],
                 "function_name": "${aws_lambda_function.main.arn}",
                 "name": "prod",
                 "description": "The current production version of the lambda.",
@@ -172,6 +173,12 @@
                 "source": "${data.archive_file.lambda.output_path}",
                 "source_hash": "${data.archive_file.lambda.output_md5}",
                 "key": "lambda-functions.zip"
+            }
+        },
+        "local_file": {
+            "lambda_package_marker": {
+                "filename": "${path.module}/build/.lambda-package",
+                "content": "Marks this build directory as holding the generated Lambda package.\n"
             }
         }
     },
